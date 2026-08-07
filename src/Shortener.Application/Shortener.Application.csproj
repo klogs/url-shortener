@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shortener.Domain\Shortener.Domain.csproj" />
+    <ProjectReference Include="..\Shortener.Contracts\Shortener.Contracts.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <RootNamespace>Shortener.Application</RootNamespace>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>Shortener.Redirect</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shortener.Application\Shortener.Application.csproj" />
+    <ProjectReference Include="..\Shortener.Infrastructure\Shortener.Infrastructure.csproj" />
+    <ProjectReference Include="..\Shortener.Contracts\Shortener.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

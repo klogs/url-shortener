@@ -1,0 +1,25 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <Authors>Klogs</Authors>
+    <Company>Klogs</Company>
+    <Copyright>Copyright © Klogs</Copyright>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!--
+      Microsoft.OpenApi 2.0.0 (transitive via Microsoft.AspNetCore.OpenApi 10.0.10)
+      has a known high-severity vulnerability: GHSA-v5pm-xwqc-g5wc.
+      Suppressed because no patched 2.x release exists and the vulnerable code path
+      (OpenAPI document serialization) is not exercised at runtime.
+      Review when Microsoft.AspNetCore.OpenApi releases a version with an updated dependency.
+    -->
+    <NuGetAuditSuppress>GHSA-v5pm-xwqc-g5wc</NuGetAuditSuppress>
+  </PropertyGroup>
+</Project>
