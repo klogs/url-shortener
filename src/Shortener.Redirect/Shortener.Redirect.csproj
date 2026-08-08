@@ -10,4 +10,8 @@
     <ProjectReference Include="..\Shortener.Contracts\Shortener.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+  </ItemGroup>
+
 </Project>

@@ -43,10 +43,30 @@ using Shortener.Application.Webhooks.Commands.DeleteWebhook;
 using Shortener.Application.Webhooks.Commands.UpdateWebhook;
 using Shortener.Application.Webhooks.Queries.ListWebhooks;
 using Shortener.Domain.Entities;
+using Serilog;
+using Serilog.Events;
 using Shortener.Api.Middleware;
 using Shortener.Infrastructure;
 
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("service", "shortener-api")
+    .WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter())
+    .CreateBootstrapLogger();
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((ctx, services, cfg) => cfg
+    .ReadFrom.Configuration(ctx.Configuration)
+    .ReadFrom.Services(services)
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore.Hosting.Diagnostics", LogEventLevel.Information)
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("service", "shortener-api")
+    .WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter()));
 
 builder.Services.AddHealthChecks();
 builder.Services.AddSingleton(TimeProvider.System);
@@ -186,6 +206,14 @@ var app = builder.Build();
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseHttpsRedirection();
+app.UseSerilogRequestLogging(opts =>
+{
+    opts.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+    opts.GetLevel = (ctx, elapsed, ex) =>
+        ex is null && ctx.Response.StatusCode < 500
+            ? LogEventLevel.Information
+            : LogEventLevel.Error;
+});
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();

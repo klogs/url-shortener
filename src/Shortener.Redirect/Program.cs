@@ -1,3 +1,5 @@
+using Serilog;
+using Serilog.Events;
 using Shortener.Application.Interfaces;
 using Shortener.Application.Links.Queries.ResolveRedirect;
 using Shortener.Application.Options;
@@ -6,7 +8,24 @@ using Shortener.Domain.Events;
 using Shortener.Infrastructure;
 using Shortener.Redirect.Middleware;
 
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("service", "shortener-redirect")
+    .WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter())
+    .CreateBootstrapLogger();
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((ctx, services, cfg) => cfg
+    .ReadFrom.Configuration(ctx.Configuration)
+    .ReadFrom.Services(services)
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("service", "shortener-redirect")
+    .WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter()));
 
 builder.Services.AddHealthChecks();
 builder.Services.AddSingleton(TimeProvider.System);
@@ -26,6 +45,14 @@ var app = builder.Build();
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseHttpsRedirection();
+app.UseSerilogRequestLogging(opts =>
+{
+    opts.MessageTemplate = "REDIRECT {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+    opts.GetLevel = (ctx, elapsed, ex) =>
+        ex is null && ctx.Response.StatusCode < 500
+            ? LogEventLevel.Information
+            : LogEventLevel.Error;
+});
 
 app.MapHealthChecks("/health/live");
 app.MapHealthChecks("/health/ready");

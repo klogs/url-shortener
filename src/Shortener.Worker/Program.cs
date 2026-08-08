@@ -1,8 +1,27 @@
+using Serilog;
+using Serilog.Events;
 using Shortener.Application.Options;
 using Shortener.Infrastructure;
 using Shortener.Worker;
 
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("service", "shortener-worker")
+    .WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter())
+    .CreateBootstrapLogger();
+
 var builder = Host.CreateApplicationBuilder(args);
+
+builder.Services.AddSerilog((services, cfg) => cfg
+    .ReadFrom.Configuration(builder.Configuration)
+    .ReadFrom.Services(services)
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("service", "shortener-worker")
+    .WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter()));
 
 builder.Services.AddSingleton(TimeProvider.System);
 

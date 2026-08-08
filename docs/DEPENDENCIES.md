@@ -220,6 +220,76 @@ Before approving, confirm all of the following:
 | RevenueOrTeamLimit | No |
 | ApprovedAt | 2026-08-08 |
 
+### Serilog.AspNetCore `9.0.0`
+
+| Field | Value |
+|---|---|
+| Package | `Serilog.AspNetCore` |
+| Version | `9.0.0` |
+| License | Apache-2.0 |
+| Repository | https://github.com/serilog/serilog-aspnetcore |
+| Purpose | Structured JSON logging for Api + Redirect; request logging middleware |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-09 |
+
+### Serilog.Extensions.Hosting `9.0.0`
+
+| Field | Value |
+|---|---|
+| Package | `Serilog.Extensions.Hosting` |
+| Version | `9.0.0` |
+| License | Apache-2.0 |
+| Repository | https://github.com/serilog/serilog-extensions-hosting |
+| Purpose | `AddSerilog` for Worker generic host |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-09 |
+
+### Serilog.Formatting.Compact `3.0.0`
+
+| Field | Value |
+|---|---|
+| Package | `Serilog.Formatting.Compact` |
+| Version | `3.0.0` |
+| License | Apache-2.0 |
+| Repository | https://github.com/serilog/serilog-formatting-compact |
+| Purpose | `CompactJsonFormatter` for machine-readable console output |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-09 |
+
+### Serilog.Settings.Configuration `9.0.0`
+
+| Field | Value |
+|---|---|
+| Package | `Serilog.Settings.Configuration` |
+| Version | `9.0.0` |
+| License | Apache-2.0 |
+| Repository | https://github.com/serilog/serilog-settings-configuration |
+| Purpose | `ReadFrom.Configuration` for appsettings-based log level overrides in Worker |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-09 |
+
+### Serilog.Sinks.Console `6.0.0`
+
+| Field | Value |
+|---|---|
+| Package | `Serilog.Sinks.Console` |
+| Version | `6.0.0` |
+| License | Apache-2.0 |
+| Repository | https://github.com/serilog/serilog-sinks-console |
+| Purpose | Console sink for Worker (Api/Redirect get it transitively via Serilog.AspNetCore) |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-09 |
+
 ### Testcontainers.PostgreSql `4.4.0`
 
 | Field | Value |
