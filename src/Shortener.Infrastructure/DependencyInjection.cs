@@ -69,4 +69,25 @@ public static class DependencyInjection
 
         return services;
     }
+
+    /// <summary>
+    /// Registers the RabbitMQ consumer + ClickEventRepository.
+    /// Call this in Shortener.Worker (consumer side).
+    /// </summary>
+    public static IServiceCollection AddAnalyticsConsumer(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.Configure<ClickEventOptions>(opts =>
+            configuration.GetSection(ClickEventOptions.SectionName).Bind(opts));
+        services.Configure<RabbitMqOptions>(opts =>
+            configuration.GetSection(RabbitMqOptions.SectionName).Bind(opts));
+        services.Configure<DatabaseOptions>(opts =>
+            configuration.GetSection("Database").Bind(opts));
+
+        services.AddScoped<IClickEventRepository, ClickEventRepository>();
+        services.AddHostedService<RabbitMqAnalyticsConsumer>();
+
+        return services;
+    }
 }

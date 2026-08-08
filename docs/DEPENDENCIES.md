@@ -108,6 +108,48 @@ Before approving, confirm all of the following:
 | RevenueOrTeamLimit | No |
 | ApprovedAt | 2026-08-08 |
 
+### RabbitMQ.Client `7.1.2`
+
+| Field | Value |
+|---|---|
+| Package | `RabbitMQ.Client` |
+| Version | `7.1.2` |
+| License | Apache-2.0 |
+| Repository | https://github.com/rabbitmq/rabbitmq-dotnet-client |
+| Purpose | Async RabbitMQ publisher (analytics) and consumer (Worker) |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-08 |
+
+### Dapper `2.1.66`
+
+| Field | Value |
+|---|---|
+| Package | `Dapper` |
+| Version | `2.1.66` |
+| License | Apache-2.0 |
+| Repository | https://github.com/DapperLib/Dapper |
+| Purpose | Lightweight ORM for high-throughput ClickEvent inserts |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-08 |
+
+### Npgsql `10.0.3`
+
+| Field | Value |
+|---|---|
+| Package | `Npgsql` |
+| Version | `10.0.3` |
+| License | PostgreSQL License |
+| Repository | https://github.com/npgsql/npgsql |
+| Purpose | Low-level PostgreSQL driver used by Dapper in ClickEventRepository |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-08 |
+
 ### Microsoft.AspNetCore.Authentication.JwtBearer `10.0.0`
 
 | Field | Value |
