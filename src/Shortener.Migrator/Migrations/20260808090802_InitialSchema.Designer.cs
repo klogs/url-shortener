@@ -9,225 +9,223 @@ using Shortener.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace Shortener.Migrator.Migrations
+namespace Shortener.Migrator.Migrations;
+[DbContext(typeof(ShortenerDbContext))]
+[Migration("20260808090802_InitialSchema")]
+partial class InitialSchema
 {
-    [DbContext(typeof(ShortenerDbContext))]
-    [Migration("20260808090802_InitialSchema")]
-    partial class InitialSchema
+    /// <inheritdoc />
+    protected override void BuildTargetModel(ModelBuilder modelBuilder)
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
-        {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.4")
-                .HasAnnotation("Relational:MaxIdentifierLength", 63);
+        modelBuilder
+            .HasAnnotation("ProductVersion", "10.0.4")
+            .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+        NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Shortener.Domain.Entities.ShortLink", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+        modelBuilder.Entity("Shortener.Domain.Entities.ShortLink", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uuid")
+                    .HasColumnName("id");
 
-                    b.Property<long>("ClickCountSnapshot")
-                        .HasColumnType("bigint")
-                        .HasColumnName("click_count_snapshot");
+                b.Property<long>("ClickCountSnapshot")
+                    .HasColumnType("bigint")
+                    .HasColumnName("click_count_snapshot");
 
-                    b.Property<DateTimeOffset>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at_utc");
+                b.Property<DateTimeOffset>("CreatedAtUtc")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at_utc");
 
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("created_by");
+                b.Property<Guid?>("CreatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("created_by");
 
-                    b.Property<string>("Description")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("description");
+                b.Property<string>("Description")
+                    .HasMaxLength(2000)
+                    .HasColumnType("character varying(2000)")
+                    .HasColumnName("description");
 
-                    b.Property<string>("DestinationUrl")
-                        .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)")
-                        .HasColumnName("destination_url");
+                b.Property<string>("DestinationUrl")
+                    .IsRequired()
+                    .HasMaxLength(2048)
+                    .HasColumnType("character varying(2048)")
+                    .HasColumnName("destination_url");
 
-                    b.Property<Guid>("DomainId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("domain_id");
+                b.Property<Guid>("DomainId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("domain_id");
 
-                    b.Property<DateTimeOffset?>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
+                b.Property<DateTimeOffset?>("ExpiresAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("expires_at");
 
-                    b.Property<bool>("IsAnonymous")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_anonymous");
+                b.Property<bool>("IsAnonymous")
+                    .HasColumnType("boolean")
+                    .HasColumnName("is_anonymous");
 
-                    b.Property<DateTimeOffset?>("LastAccessedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_accessed_at");
+                b.Property<DateTimeOffset?>("LastAccessedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("last_accessed_at");
 
-                    b.Property<int>("RedirectType")
-                        .HasColumnType("integer")
-                        .HasColumnName("redirect_type");
+                b.Property<int>("RedirectType")
+                    .HasColumnType("integer")
+                    .HasColumnName("redirect_type");
 
-                    b.Property<string>("ShortCode")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("short_code");
+                b.Property<string>("ShortCode")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("character varying(100)")
+                    .HasColumnName("short_code");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("status");
+                b.Property<string>("Status")
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasColumnType("character varying(20)")
+                    .HasColumnName("status");
 
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
+                b.Property<Guid>("TenantId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("tenant_id");
 
-                    b.Property<string>("Title")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("title");
+                b.Property<string>("Title")
+                    .HasMaxLength(500)
+                    .HasColumnType("character varying(500)")
+                    .HasColumnName("title");
 
-                    b.Property<DateTimeOffset>("UpdatedAtUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at_utc");
+                b.Property<DateTimeOffset>("UpdatedAtUtc")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("updated_at_utc");
 
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("updated_by");
+                b.Property<Guid?>("UpdatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("updated_by");
 
-                    b.Property<uint>("Version")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("version");
+                b.Property<uint>("Version")
+                    .IsConcurrencyToken()
+                    .ValueGeneratedOnAddOrUpdate()
+                    .HasColumnType("xid")
+                    .HasColumnName("version");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.HasIndex("ExpiresAt")
-                        .HasDatabaseName("ix_short_links_expires_at_active")
-                        .HasFilter("expires_at IS NOT NULL AND status = 'Active'");
+                b.HasIndex("ExpiresAt")
+                    .HasDatabaseName("ix_short_links_expires_at_active")
+                    .HasFilter("expires_at IS NOT NULL AND status = 'Active'");
 
-                    b.HasIndex("DomainId", "ShortCode")
-                        .IsUnique()
-                        .HasDatabaseName("ix_short_links_domain_code");
+                b.HasIndex("DomainId", "ShortCode")
+                    .IsUnique()
+                    .HasDatabaseName("ix_short_links_domain_code");
 
-                    b.HasIndex("TenantId", "Status", "CreatedAtUtc")
-                        .HasDatabaseName("ix_short_links_tenant_status_created");
+                b.HasIndex("TenantId", "Status", "CreatedAtUtc")
+                    .HasDatabaseName("ix_short_links_tenant_status_created");
 
-                    b.ToTable("short_links", (string)null);
-                });
+                b.ToTable("short_links", (string)null);
+            });
 
-            modelBuilder.Entity("Shortener.Domain.Entities.Tenant", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+        modelBuilder.Entity("Shortener.Domain.Entities.Tenant", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uuid")
+                    .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at_utc");
+                b.Property<DateTimeOffset>("CreatedAtUtc")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at_utc");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
+                b.Property<bool>("IsActive")
+                    .HasColumnType("boolean")
+                    .HasColumnName("is_active");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("name");
+                b.Property<string>("Name")
+                    .IsRequired()
+                    .HasMaxLength(200)
+                    .HasColumnType("character varying(200)")
+                    .HasColumnName("name");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.ToTable("tenants", (string)null);
-                });
+                b.ToTable("tenants", (string)null);
+            });
 
-            modelBuilder.Entity("Shortener.Domain.Entities.TenantDomain", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+        modelBuilder.Entity("Shortener.Domain.Entities.TenantDomain", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uuid")
+                    .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at_utc");
+                b.Property<DateTimeOffset>("CreatedAtUtc")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at_utc");
 
-                    b.Property<string>("Host")
-                        .IsRequired()
-                        .HasMaxLength(253)
-                        .HasColumnType("character varying(253)")
-                        .HasColumnName("host");
+                b.Property<string>("Host")
+                    .IsRequired()
+                    .HasMaxLength(253)
+                    .HasColumnType("character varying(253)")
+                    .HasColumnName("host");
 
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_default");
+                b.Property<bool>("IsDefault")
+                    .HasColumnType("boolean")
+                    .HasColumnName("is_default");
 
-                    b.Property<string>("NormalizedHost")
-                        .IsRequired()
-                        .HasMaxLength(253)
-                        .HasColumnType("character varying(253)")
-                        .HasColumnName("normalized_host");
+                b.Property<string>("NormalizedHost")
+                    .IsRequired()
+                    .HasMaxLength(253)
+                    .HasColumnType("character varying(253)")
+                    .HasColumnName("normalized_host");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("status");
+                b.Property<string>("Status")
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasColumnType("character varying(20)")
+                    .HasColumnName("status");
 
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
+                b.Property<Guid>("TenantId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("tenant_id");
 
-                    b.Property<string>("VerificationToken")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("verification_token");
+                b.Property<string>("VerificationToken")
+                    .HasMaxLength(100)
+                    .HasColumnType("character varying(100)")
+                    .HasColumnName("verification_token");
 
-                    b.Property<DateTimeOffset?>("VerifiedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("verified_at");
+                b.Property<DateTimeOffset?>("VerifiedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("verified_at");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.HasIndex("NormalizedHost")
-                        .IsUnique()
-                        .HasDatabaseName("ix_domains_normalized_host");
+                b.HasIndex("NormalizedHost")
+                    .IsUnique()
+                    .HasDatabaseName("ix_domains_normalized_host");
 
-                    b.HasIndex("TenantId")
-                        .HasDatabaseName("ix_domains_tenant_id");
+                b.HasIndex("TenantId")
+                    .HasDatabaseName("ix_domains_tenant_id");
 
-                    b.ToTable("domains", (string)null);
-                });
+                b.ToTable("domains", (string)null);
+            });
 
-            modelBuilder.Entity("Shortener.Domain.Entities.ShortLink", b =>
-                {
-                    b.HasOne("Shortener.Domain.Entities.TenantDomain", null)
-                        .WithMany()
-                        .HasForeignKey("DomainId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
+        modelBuilder.Entity("Shortener.Domain.Entities.ShortLink", b =>
+            {
+                b.HasOne("Shortener.Domain.Entities.TenantDomain", null)
+                    .WithMany()
+                    .HasForeignKey("DomainId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+            });
 
-            modelBuilder.Entity("Shortener.Domain.Entities.TenantDomain", b =>
-                {
-                    b.HasOne("Shortener.Domain.Entities.Tenant", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
+        modelBuilder.Entity("Shortener.Domain.Entities.TenantDomain", b =>
+            {
+                b.HasOne("Shortener.Domain.Entities.Tenant", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+            });
 #pragma warning restore 612, 618
-        }
     }
 }
