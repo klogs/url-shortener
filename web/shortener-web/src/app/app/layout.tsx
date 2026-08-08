@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { UserMenu } from "@/components/UserMenu";
 
 export const metadata: Metadata = {
   title: "Shortener — Dashboard",
@@ -14,8 +15,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </p>
         <NavLink href="/app">Overview</NavLink>
         <NavLink href="/app/links">Links</NavLink>
-        <div className="mt-auto pt-6">
+        <NavLink href="/app/domains">Domains</NavLink>
+        <div className="mt-auto pt-6 space-y-1">
           <NavLink href="/">← Back to home</NavLink>
+          <UserMenu />
         </div>
       </nav>
       <main className="flex-1 p-8">{children}</main>
