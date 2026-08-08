@@ -8,4 +8,5 @@ public interface IGeoRouteRepository
     Task<GeoRoute?> GetByIdAsync(Guid id, Guid tenantId, CancellationToken ct = default);
     Task InsertAsync(GeoRoute route, CancellationToken ct = default);
     Task DeleteAsync(Guid id, CancellationToken ct = default);
+    Task<int> CountByLinkAsync(Guid linkId, CancellationToken ct = default);
 }

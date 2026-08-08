@@ -6,6 +6,7 @@ internal sealed class FakeRedirectCache : IRedirectCache
 {
     private readonly Dictionary<string, CachedRedirect?> _store = [];
     private readonly Dictionary<string, IReadOnlyList<CachedVariant>> _variants = [];
+    private readonly Dictionary<string, IReadOnlyList<CachedGeoRoute>> _geoRoutes = [];
 
     public void Seed(string host, string code, CachedRedirect? value)
         => _store[$"{host}:{code}"] = value;
@@ -50,6 +51,24 @@ internal sealed class FakeRedirectCache : IRedirectCache
     public Task RemoveVariantsAsync(string normalizedHost, string shortCode, CancellationToken ct)
     {
         _variants.Remove($"{normalizedHost}:{shortCode}");
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<CachedGeoRoute>?> GetGeoRoutesAsync(string normalizedHost, string shortCode, CancellationToken ct)
+    {
+        _geoRoutes.TryGetValue($"{normalizedHost}:{shortCode}", out var result);
+        return Task.FromResult<IReadOnlyList<CachedGeoRoute>?>(result);
+    }
+
+    public Task SetGeoRoutesAsync(string normalizedHost, string shortCode, IReadOnlyList<CachedGeoRoute> routes, CancellationToken ct)
+    {
+        _geoRoutes[$"{normalizedHost}:{shortCode}"] = routes;
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveGeoRoutesAsync(string normalizedHost, string shortCode, CancellationToken ct)
+    {
+        _geoRoutes.Remove($"{normalizedHost}:{shortCode}");
         return Task.CompletedTask;
     }
 }

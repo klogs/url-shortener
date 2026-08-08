@@ -29,6 +29,9 @@ using Shortener.Application.Links.Commands.UpdateLink;
 using Shortener.Application.Links.Queries.GetLink;
 using Shortener.Application.Links.Queries.ListLinks;
 using Shortener.Application.Options;
+using Shortener.Application.GeoRoutes.Commands.CreateGeoRoute;
+using Shortener.Application.GeoRoutes.Commands.DeleteGeoRoute;
+using Shortener.Application.GeoRoutes.Queries;
 using Shortener.Application.Variants.Commands.CreateVariant;
 using Shortener.Application.Variants.Commands.DeleteVariant;
 using Shortener.Application.Variants.Queries;
@@ -81,6 +84,11 @@ builder.Services.AddScoped<RevokeApiKeyHandler>();
 builder.Services.AddScoped<CreateVariantHandler>();
 builder.Services.AddScoped<DeleteVariantHandler>();
 builder.Services.AddScoped<ListVariantsHandler>();
+
+// Geo route handlers
+builder.Services.AddScoped<CreateGeoRouteHandler>();
+builder.Services.AddScoped<DeleteGeoRouteHandler>();
+builder.Services.AddScoped<ListGeoRoutesHandler>();
 
 // Block / unblock / abuse report handlers
 builder.Services.AddScoped<BlockLinkHandler>();
@@ -663,6 +671,77 @@ links.MapDelete("/{id:guid}/variants/{variantId:guid}", async (
     try
     {
         await handler.HandleAsync(new DeleteVariantCommand(variantId, tenantId.Value), ct);
+        return Results.NoContent();
+    }
+    catch (InvalidOperationException)
+    {
+        return Results.NotFound();
+    }
+});
+
+// ── Authenticated: geo routes ────────────────────────────────────────────────
+
+links.MapGet("/{id:guid}/geo-routes", async (
+    Guid id,
+    ClaimsPrincipal user,
+    ListGeoRoutesHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    var result = await handler.HandleAsync(new ListGeoRoutesQuery(id, tenantId.Value), ct);
+    return Results.Ok(result);
+});
+
+links.MapPost("/{id:guid}/geo-routes", async (
+    Guid id,
+    CreateGeoRouteRequest request,
+    ClaimsPrincipal user,
+    CreateGeoRouteHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    try
+    {
+        var command = new CreateGeoRouteCommand(id, tenantId.Value, request.CountryCode, request.DestinationUrl);
+        var result = await handler.HandleAsync(command, ct);
+        return Results.Created($"/api/v1/links/{id}/geo-routes/{result.Id}", result);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status404NotFound);
+    }
+});
+
+links.MapDelete("/{id:guid}/geo-routes/{routeId:guid}", async (
+    Guid id,
+    Guid routeId,
+    ClaimsPrincipal user,
+    DeleteGeoRouteHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    try
+    {
+        await handler.HandleAsync(new DeleteGeoRouteCommand(routeId, tenantId.Value), ct);
         return Results.NoContent();
     }
     catch (InvalidOperationException)

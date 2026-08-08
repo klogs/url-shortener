@@ -206,6 +206,20 @@ Before approving, confirm all of the following:
 | RevenueOrTeamLimit | No |
 | ApprovedAt | 2026-08-08 |
 
+### MaxMind.Db `4.0.0`
+
+| Field | Value |
+|---|---|
+| Package | `MaxMind.Db` |
+| Version | `4.0.0` |
+| License | Apache-2.0 |
+| Repository | https://github.com/maxmind/MaxMind-DB-Reader-dotnet |
+| Purpose | Read GeoLite2-Country.mmdb for IP-to-country resolution in geo routing |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No (DB file requires free MaxMind account) |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-08 |
+
 ---
 
 ## Pending / Under Review

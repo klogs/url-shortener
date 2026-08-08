@@ -33,6 +33,7 @@ public sealed class ShortLink
     public long ClickCountSnapshot { get; private set; }
     public int ReportCount { get; private set; }
     public bool IsAbTest { get; private set; }
+    public bool HasGeoRoutes { get; private set; }
 
     // Optimistic concurrency token
     public uint Version { get; private set; }
@@ -181,6 +182,10 @@ public sealed class ShortLink
     public void EnableAbTest() => IsAbTest = true;
 
     public void DisableAbTest() => IsAbTest = false;
+
+    public void EnableGeoRouting() => HasGeoRoutes = true;
+
+    public void DisableGeoRouting() => HasGeoRoutes = false;
 
     // Called by sweep worker when report count crosses threshold.
     public void AutoBlock(DateTimeOffset now)

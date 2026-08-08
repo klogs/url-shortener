@@ -18,8 +18,11 @@ public sealed class ResolveRedirectHandlerTests
         IShortLinkRepository links,
         IRedirectCache cache,
         ILinkVariantRepository? variants = null,
+        IGeoRouteRepository? geoRoutes = null,
+        IGeoResolver? geoResolver = null,
         TimeProvider? time = null)
-        => new(links, variants ?? new FakeLinkVariantRepository(), cache, time ?? TimeProvider.System);
+        => new(links, variants ?? new FakeLinkVariantRepository(), geoRoutes ?? new FakeGeoRouteRepository(),
+            geoResolver ?? new NullGeoResolver(), cache, time ?? TimeProvider.System);
 
     private static ShortLink ActiveLink(DateTimeOffset? expiresAt = null)
         => ShortLink.CreateAnonymous(TenantId, DomainId, Code, "https://dest.example.com",

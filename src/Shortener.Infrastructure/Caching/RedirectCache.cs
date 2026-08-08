@@ -19,6 +19,10 @@ internal sealed class RedirectCache(IConnectionMultiplexer redis, IOptions<Redis
     private static string VariantKey(string normalizedHost, string shortCode)
         => $"sl:ab:{normalizedHost}:{shortCode}";
 
+    // Geo route cache key: sl:geo:{normalizedHost}:{shortCode}
+    private static string GeoKey(string normalizedHost, string shortCode)
+        => $"sl:geo:{normalizedHost}:{shortCode}";
+
     // Negative cache sentinel: empty DestinationUrl
     private const string NegativeSentinel = "";
 
@@ -43,13 +47,14 @@ internal sealed class RedirectCache(IConnectionMultiplexer redis, IOptions<Redis
         var status = map.TryGetValue("status", out var s) ? s : "Active";
         var redirectCode = map.TryGetValue("rtype", out var rt) && int.TryParse(rt, out var rc) ? rc : 302;
         var isAbTest = map.TryGetValue("ab", out var abStr) && abStr == "1";
+        var hasGeoRoutes = map.TryGetValue("geo", out var geoStr) && geoStr == "1";
         DateTimeOffset? expiresAt = null;
         if (map.TryGetValue("exp", out var expStr) && DateTimeOffset.TryParse(expStr, out var exp))
         {
             expiresAt = exp;
         }
 
-        return new CachedRedirect(linkId, dest, status, expiresAt, redirectCode, isAbTest);
+        return new CachedRedirect(linkId, dest, status, expiresAt, redirectCode, isAbTest, hasGeoRoutes);
     }
 
     public async Task SetAsync(string normalizedHost, string shortCode, CachedRedirect value,
@@ -65,6 +70,7 @@ internal sealed class RedirectCache(IConnectionMultiplexer redis, IOptions<Redis
             new("status", value.Status),
             new("rtype", value.RedirectStatusCode.ToString()),
             new("ab", value.IsAbTest ? "1" : "0"),
+            new("geo", value.HasGeoRoutes ? "1" : "0"),
         ];
 
         if (value.ExpiresAt.HasValue)
@@ -113,6 +119,31 @@ internal sealed class RedirectCache(IConnectionMultiplexer redis, IOptions<Redis
 
     public Task RemoveVariantsAsync(string normalizedHost, string shortCode, CancellationToken ct)
         => _db.KeyDeleteAsync(VariantKey(normalizedHost, shortCode));
+
+    public async Task<IReadOnlyList<CachedGeoRoute>?> GetGeoRoutesAsync(
+        string normalizedHost, string shortCode, CancellationToken ct)
+    {
+        var json = await _db.StringGetAsync(GeoKey(normalizedHost, shortCode));
+        if (json.IsNullOrEmpty)
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<List<CachedGeoRoute>>(json.ToString());
+    }
+
+    public async Task SetGeoRoutesAsync(
+        string normalizedHost, string shortCode, IReadOnlyList<CachedGeoRoute> routes, CancellationToken ct)
+    {
+        var json = JsonSerializer.Serialize(routes);
+        await _db.StringSetAsync(
+            GeoKey(normalizedHost, shortCode),
+            json,
+            TimeSpan.FromSeconds(_opts.RedirectCacheTtlSeconds));
+    }
+
+    public Task RemoveGeoRoutesAsync(string normalizedHost, string shortCode, CancellationToken ct)
+        => _db.KeyDeleteAsync(GeoKey(normalizedHost, shortCode));
 
     private static TimeSpan ComputeTtl(DateTimeOffset? linkExpiresAt, int defaultTtlSeconds)
     {

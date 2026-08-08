@@ -6,6 +6,8 @@ namespace Shortener.Application.Links.Queries.ResolveRedirect;
 public sealed class ResolveRedirectHandler(
     IShortLinkRepository links,
     ILinkVariantRepository variants,
+    IGeoRouteRepository geoRoutes,
+    IGeoResolver geoResolver,
     IRedirectCache cache,
     TimeProvider time)
 {
@@ -18,13 +20,17 @@ public sealed class ResolveRedirectHandler(
         if (cached is not null)
         {
             var resolution = ResolveCached(cached, now);
-            if (resolution.Outcome == RedirectOutcome.Redirect && cached.IsAbTest)
+            if (resolution.Outcome == RedirectOutcome.Redirect)
             {
-                var destination = await ResolveAbVariantAsync(
-                    query.NormalizedHost, query.ShortCode, cached.LinkId, resolution.TenantId, ct);
-                if (!string.IsNullOrEmpty(destination))
+                resolution = await ApplyGeoRoutingAsync(resolution, cached, query, ct);
+                if (resolution.Outcome == RedirectOutcome.Redirect && cached.IsAbTest)
                 {
-                    return resolution with { DestinationUrl = destination };
+                    var abDest = await ResolveAbVariantAsync(
+                        query.NormalizedHost, query.ShortCode, cached.LinkId, resolution.TenantId, ct);
+                    if (!string.IsNullOrEmpty(abDest))
+                    {
+                        return resolution with { DestinationUrl = abDest };
+                    }
                 }
             }
 
@@ -46,7 +52,8 @@ public sealed class ResolveRedirectHandler(
             link.Status.ToString(),
             link.ExpiresAt,
             (int)link.RedirectType,
-            link.IsAbTest);
+            link.IsAbTest,
+            link.HasGeoRoutes);
 
         await cache.SetAsync(query.NormalizedHost, query.ShortCode, entry, link.ExpiresAt, ct);
 
@@ -67,10 +74,24 @@ public sealed class ResolveRedirectHandler(
         }
 
         var destinationUrl = link.DestinationUrl;
-        if (link.IsAbTest)
+
+        if (link.HasGeoRoutes && !string.IsNullOrEmpty(query.ClientIp))
         {
-            destinationUrl = await ResolveAbVariantAsync(
+            var geoUrl = await ResolveGeoRouteAsync(query.NormalizedHost, query.ShortCode, link.Id, link.TenantId, query.ClientIp, ct);
+            if (!string.IsNullOrEmpty(geoUrl))
+            {
+                destinationUrl = geoUrl;
+            }
+        }
+
+        if (link.IsAbTest && destinationUrl == link.DestinationUrl)
+        {
+            var abUrl = await ResolveAbVariantAsync(
                 query.NormalizedHost, query.ShortCode, link.Id, link.TenantId, ct);
+            if (!string.IsNullOrEmpty(abUrl))
+            {
+                destinationUrl = abUrl;
+            }
         }
 
         return new RedirectResolution(RedirectOutcome.Redirect, destinationUrl, (int)link.RedirectType,
@@ -95,6 +116,48 @@ public sealed class ResolveRedirectHandler(
         }
 
         return PickWeightedVariant(cached);
+    }
+
+    private async Task<RedirectResolution> ApplyGeoRoutingAsync(
+        RedirectResolution resolution, CachedRedirect cached, ResolveRedirectQuery query, CancellationToken ct)
+    {
+        if (!cached.HasGeoRoutes || string.IsNullOrEmpty(query.ClientIp))
+        {
+            return resolution;
+        }
+
+        var geoUrl = await ResolveGeoRouteAsync(
+            query.NormalizedHost, query.ShortCode, cached.LinkId, resolution.TenantId, query.ClientIp, ct);
+
+        return string.IsNullOrEmpty(geoUrl) ? resolution : resolution with { DestinationUrl = geoUrl };
+    }
+
+    private async Task<string?> ResolveGeoRouteAsync(
+        string normalizedHost, string shortCode, Guid linkId, Guid? tenantId, string clientIp, CancellationToken ct)
+    {
+        var cachedRoutes = await cache.GetGeoRoutesAsync(normalizedHost, shortCode, ct);
+        if (cachedRoutes is null)
+        {
+            var dbRoutes = await geoRoutes.ListByLinkAsync(linkId, tenantId ?? Guid.Empty, ct);
+            cachedRoutes = dbRoutes.Select(r => new CachedGeoRoute(r.CountryCode, r.DestinationUrl)).ToList();
+            await cache.SetGeoRoutesAsync(normalizedHost, shortCode, cachedRoutes, ct);
+        }
+
+        if (cachedRoutes.Count == 0)
+        {
+            return null;
+        }
+
+        var country = await geoResolver.GetCountryAsync(clientIp, ct);
+        if (string.IsNullOrEmpty(country))
+        {
+            return null;
+        }
+
+        var match = cachedRoutes.FirstOrDefault(r =>
+            string.Equals(r.CountryCode, country, StringComparison.OrdinalIgnoreCase));
+
+        return match?.DestinationUrl;
     }
 
     private static string PickWeightedVariant(IReadOnlyList<CachedVariant> variantList)

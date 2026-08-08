@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Shortener.Infrastructure.Persistence;
@@ -10,9 +11,11 @@ using Shortener.Infrastructure.Persistence;
 
 namespace Shortener.Migrator.Migrations;
     [DbContext(typeof(ShortenerDbContext))]
-    partial class ShortenerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260808142720_AddGeoRoutes")]
+    partial class AddGeoRoutes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

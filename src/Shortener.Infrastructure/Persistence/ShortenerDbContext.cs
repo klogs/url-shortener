@@ -13,6 +13,7 @@ public sealed class ShortenerDbContext(DbContextOptions<ShortenerDbContext> opti
     public DbSet<WebhookDelivery> WebhookDeliveries => Set<WebhookDelivery>();
     public DbSet<AbuseReport> AbuseReports => Set<AbuseReport>();
     public DbSet<LinkVariant> LinkVariants => Set<LinkVariant>();
+    public DbSet<GeoRoute> GeoRoutes => Set<GeoRoute>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -43,7 +43,7 @@ app.MapGet("/{shortCode}", async (
     }
 
     var normalizedHost = TenantDomain.NormalizeHost(ctx.Request.Host.Value ?? string.Empty);
-    var query = new ResolveRedirectQuery(normalizedHost, shortCode);
+    var query = new ResolveRedirectQuery(normalizedHost, shortCode, ip);
     var resolution = await handler.HandleAsync(query, ct);
 
     if (resolution.Outcome != RedirectOutcome.Redirect)
@@ -61,7 +61,7 @@ app.MapGet("/{shortCode}", async (
         UserAgent: ctx.Request.Headers.UserAgent.ToString() is { Length: > 0 } ua ? ua : null,
         RemoteIp: ctx.Connection.RemoteIpAddress?.ToString(),
         Referer: ctx.Request.Headers.Referer.ToString() is { Length: > 0 } ref_ ? ref_ : null,
-        Country: null)); // geo-lookup deferred to Phase 6
+        Country: null));
 
     var url = resolution.DestinationUrl!;
     return resolution.StatusCode switch

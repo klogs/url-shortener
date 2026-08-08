@@ -9,6 +9,7 @@ using Shortener.Infrastructure.Analytics;
 using Shortener.Infrastructure.ApiKeys;
 using Shortener.Infrastructure.Caching;
 using Shortener.Infrastructure.Captcha;
+using Shortener.Infrastructure.Geo;
 using Shortener.Infrastructure.Domains;
 using Shortener.Infrastructure.Persistence;
 using Shortener.Infrastructure.Persistence.Repositories;
@@ -38,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<IWebhookRepository, WebhookRepository>();
         services.AddScoped<IAbuseReportRepository, AbuseReportRepository>();
         services.AddScoped<ILinkVariantRepository, LinkVariantRepository>();
+        services.AddScoped<IGeoRouteRepository, GeoRouteRepository>();
         services.AddScoped<IApiKeyAuthenticator, ApiKeyAuthenticator>();
 
         // URL blocklist (reads from AbuseOptions.BlockedHosts at startup)
@@ -59,6 +61,11 @@ public static class DependencyInjection
         // Short code + captcha
         services.AddSingleton<IShortCodeGenerator, Base62ShortCodeGenerator>();
         services.AddSingleton<ICaptchaVerifier, DisabledCaptchaVerifier>();
+
+        // Geo routing
+        services.Configure<GeoOptions>(opts =>
+            configuration.GetSection(GeoOptions.SectionName).Bind(opts));
+        services.AddSingleton<IGeoResolver, MaxMindGeoResolver>();
 
         // Domain verifier (HTTP challenge)
         services.AddSingleton<IDomainVerifier, HttpDomainVerifier>();
