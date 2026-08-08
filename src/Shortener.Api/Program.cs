@@ -3,8 +3,13 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
+using Shortener.Api.Endpoints.Domains;
 using Shortener.Api.Endpoints.Links;
 using Shortener.Api.Endpoints.PublicLinks;
+using Shortener.Application.Domains.Commands.AddDomain;
+using Shortener.Application.Domains.Commands.RemoveDomain;
+using Shortener.Application.Domains.Commands.VerifyDomain;
+using Shortener.Application.Domains.Queries.ListDomains;
 using Shortener.Application.Interfaces;
 using Shortener.Application.Links.Commands.CreateLink;
 using Shortener.Application.Links.Commands.DeleteLink;
@@ -41,6 +46,12 @@ builder.Services.AddScoped<ListLinksHandler>();
 builder.Services.AddScoped<GetLinkHandler>();
 builder.Services.AddScoped<UpdateLinkHandler>();
 builder.Services.AddScoped<DeleteLinkHandler>();
+
+// Domain handlers
+builder.Services.AddScoped<AddDomainHandler>();
+builder.Services.AddScoped<ListDomainsHandler>();
+builder.Services.AddScoped<VerifyDomainHandler>();
+builder.Services.AddScoped<RemoveDomainHandler>();
 
 // JWT bearer auth
 var authOptions = builder.Configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>();
@@ -230,6 +241,100 @@ links.MapDelete("/{id:guid}", async (
     catch (InvalidOperationException)
     {
         return Results.NotFound();
+    }
+});
+
+// ── Authenticated: domain management ─────────────────────────────────────────
+
+var domains = app.MapGroup("/api/v1/domains").RequireAuthorization();
+
+domains.MapGet("/", async (
+    ClaimsPrincipal user,
+    ListDomainsHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    var result = await handler.HandleAsync(new ListDomainsQuery(tenantId.Value), ct);
+    return Results.Ok(result);
+});
+
+domains.MapPost("/", async (
+    AddDomainRequest request,
+    ClaimsPrincipal user,
+    AddDomainHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    try
+    {
+        var result = await handler.HandleAsync(new AddDomainCommand(tenantId.Value, request.Host), ct);
+        return Results.Created($"/api/v1/domains/{result.Id}", result);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status409Conflict);
+    }
+});
+
+domains.MapPost("/{id:guid}/verify", async (
+    Guid id,
+    ClaimsPrincipal user,
+    VerifyDomainHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    try
+    {
+        await handler.HandleAsync(new VerifyDomainCommand(id, tenantId.Value), ct);
+        return Results.NoContent();
+    }
+    catch (InvalidOperationException ex)
+    {
+        var status = ex.Message.Contains("not found") ? StatusCodes.Status404NotFound : StatusCodes.Status422UnprocessableEntity;
+        return Results.Problem(ex.Message, statusCode: status);
+    }
+});
+
+domains.MapDelete("/{id:guid}", async (
+    Guid id,
+    ClaimsPrincipal user,
+    RemoveDomainHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    try
+    {
+        await handler.HandleAsync(new RemoveDomainCommand(id, tenantId.Value), ct);
+        return Results.NoContent();
+    }
+    catch (InvalidOperationException ex)
+    {
+        var status = ex.Message.Contains("not found") ? StatusCodes.Status404NotFound : StatusCodes.Status422UnprocessableEntity;
+        return Results.Problem(ex.Message, statusCode: status);
     }
 });
 
