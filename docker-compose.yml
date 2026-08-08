@@ -1,0 +1,109 @@
+services:
+
+  # ─── Infrastructure ────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shortener
+      POSTGRES_USER: shortener
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shortener_dev}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shortener -d shortener"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save "" --appendonly no --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    restart: unless-stopped
+    profiles: ["messaging"]
+    environment:
+      RABBITMQ_DEFAULT_USER: shortener
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-shortener_dev}
+      RABBITMQ_DEFAULT_VHOST: shortener
+    ports:
+      - "5672:5672"
+      - "15672:15672"    # management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # ─── Application Services (uncomment when Dockerfiles are ready in Phase 1) ─
+
+  # shortener-api:
+  #   build:
+  #     context: .
+  #     dockerfile: src/Shortener.Api/Dockerfile
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - Database__ConnectionString=Host=postgres;Database=shortener;Username=shortener;Password=${POSTGRES_PASSWORD:-shortener_dev}
+  #     - Redis__ConnectionString=redis:6379
+  #     - Auth__Authority=${AUTH__AUTHORITY}
+  #     - Auth__ClientId=${AUTH__CLIENT_ID}
+  #     - Captcha__Provider=Disabled
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+
+  # shortener-redirect:
+  #   build:
+  #     context: .
+  #     dockerfile: src/Shortener.Redirect/Dockerfile
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8081:8080"
+  #   environment:
+  #     - Database__ConnectionString=Host=postgres;Database=shortener;Username=shortener;Password=${POSTGRES_PASSWORD:-shortener_dev}
+  #     - Redis__ConnectionString=redis:6379
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+
+  # shortener-worker:
+  #   build:
+  #     context: .
+  #     dockerfile: src/Shortener.Worker/Dockerfile
+  #   restart: unless-stopped
+  #   environment:
+  #     - Database__ConnectionString=Host=postgres;Database=shortener;Username=shortener;Password=${POSTGRES_PASSWORD:-shortener_dev}
+  #     - Redis__ConnectionString=redis:6379
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
