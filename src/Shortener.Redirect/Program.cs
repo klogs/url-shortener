@@ -1,6 +1,8 @@
+using Shortener.Application.Interfaces;
 using Shortener.Application.Links.Queries.ResolveRedirect;
 using Shortener.Application.Options;
 using Shortener.Domain.Entities;
+using Shortener.Domain.Events;
 using Shortener.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +18,7 @@ builder.Services.Configure<DatabaseOptions>(
     builder.Configuration.GetSection("Database"));
 
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddAnalyticsPipeline(builder.Configuration);
 builder.Services.AddScoped<ResolveRedirectHandler>();
 
 var app = builder.Build();
@@ -27,6 +30,8 @@ app.MapGet("/{shortCode}", async (
     string shortCode,
     HttpContext ctx,
     ResolveRedirectHandler handler,
+    IClickEventBuffer analyticsBuffer,
+    TimeProvider time,
     CancellationToken ct) =>
 {
     var normalizedHost = TenantDomain.NormalizeHost(ctx.Request.Host.Value ?? string.Empty);
@@ -37,6 +42,18 @@ app.MapGet("/{shortCode}", async (
     {
         return Results.NotFound();
     }
+
+    // Non-blocking analytics — TryWrite returns false if buffer is full (dropped, never throws)
+    analyticsBuffer.TryWrite(new ClickEvent(
+        LinkId: resolution.LinkId ?? Guid.Empty,
+        TenantId: resolution.TenantId ?? Guid.Empty,
+        ShortCode: shortCode,
+        NormalizedHost: normalizedHost,
+        OccurredAtUtc: time.GetUtcNow(),
+        UserAgent: ctx.Request.Headers.UserAgent.ToString() is { Length: > 0 } ua ? ua : null,
+        RemoteIp: ctx.Connection.RemoteIpAddress?.ToString(),
+        Referer: ctx.Request.Headers.Referer.ToString() is { Length: > 0 } ref_ ? ref_ : null,
+        Country: null)); // geo-lookup deferred to Phase 6
 
     var url = resolution.DestinationUrl!;
     return resolution.StatusCode switch

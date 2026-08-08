@@ -53,7 +53,8 @@ public sealed class ResolveRedirectHandler(
             return new RedirectResolution(RedirectOutcome.Disabled);
         }
 
-        return new RedirectResolution(RedirectOutcome.Redirect, link.DestinationUrl, (int)link.RedirectType);
+        return new RedirectResolution(RedirectOutcome.Redirect, link.DestinationUrl, (int)link.RedirectType,
+            LinkId: link.Id, TenantId: link.TenantId);
     }
 
     private static RedirectResolution ResolveCached(CachedRedirect cached, DateTimeOffset now)
@@ -79,6 +80,7 @@ public sealed class ResolveRedirectHandler(
             return new RedirectResolution(RedirectOutcome.NotFound);
         }
 
-        return new RedirectResolution(RedirectOutcome.Redirect, cached.DestinationUrl, cached.RedirectStatusCode);
+        return new RedirectResolution(RedirectOutcome.Redirect, cached.DestinationUrl, cached.RedirectStatusCode,
+            LinkId: cached.LinkId, TenantId: null); // TenantId not in cache — analytics can be added via LinkId join
     }
 }
