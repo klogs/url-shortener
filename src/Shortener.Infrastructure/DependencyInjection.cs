@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
 using Shortener.Application.Interfaces;
 using Shortener.Application.Options;
+using Shortener.Infrastructure.Analytics;
 using Shortener.Infrastructure.Caching;
 using Shortener.Infrastructure.Captcha;
 using Shortener.Infrastructure.Persistence;
@@ -45,6 +46,26 @@ public static class DependencyInjection
 
         // Single-tenant seeder (no-op in MultiTenant mode)
         services.AddHostedService<SingleTenantSeeder>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the in-process analytics buffer + RabbitMQ publisher.
+    /// Call this in Shortener.Redirect (publisher side).
+    /// </summary>
+    public static IServiceCollection AddAnalyticsPipeline(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.Configure<ClickEventOptions>(opts =>
+            configuration.GetSection(ClickEventOptions.SectionName).Bind(opts));
+        services.Configure<RabbitMqOptions>(opts =>
+            configuration.GetSection(RabbitMqOptions.SectionName).Bind(opts));
+
+        services.AddSingleton<ClickEventChannel>();
+        services.AddSingleton<IClickEventBuffer>(sp => sp.GetRequiredService<ClickEventChannel>());
+        services.AddHostedService<RabbitMqAnalyticsPublisher>();
 
         return services;
     }
