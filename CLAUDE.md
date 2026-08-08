@@ -151,9 +151,7 @@ Random cryptographic Base62 (alphabet `0-9A-Za-z`), 7 characters → ~3.5 trilli
 - **Phase 4**: API platform (API keys, bulk create, webhooks foundation) ✅
 - **Phase 5**: Abuse prevention operations ✅
 - **Phase 6**: Advanced features (QR, A/B, geo routing) ✅
-- **Phase 7**: Dashboard completion — Next.js frontend wired to real API; link list, create form, analytics charts, A/B variant management, geo route management
-- **Phase 8**: Security & operations — HTTPS enforcement, HSTS, CSP headers, GDPR data deletion, multi-tenant isolation hardening, secrets management guidance
-- **Phase 9**: Test coverage — Integration tests (Testcontainers), architecture tests (layer dependency rules), k6 load tests for redirect hot-path
-- **Phase 10**: Observability — OpenTelemetry tracing + metrics, Serilog structured logging, Grafana/Prometheus stack in docker-compose, detailed health checks
-
-**Do not add Phase 8+ features while Phase 7 is incomplete.**
+- **Phase 7**: Dashboard completion — Next.js frontend wired to real API; link list, create form, analytics charts, A/B variant management, geo route management ✅
+- **Phase 8**: Security & operations — HTTPS enforcement, HSTS, CSP headers, GDPR data deletion, multi-tenant isolation hardening, secrets management guidance ✅
+- **Phase 9**: Test coverage — Integration tests (Testcontainers), architecture tests (layer dependency rules), k6 load tests for redirect hot-path ✅
+- **Phase 10**: Observability — OpenTelemetry tracing + metrics, Serilog structured logging, Grafana/Prometheus stack in docker-compose, detailed health checks ✅
