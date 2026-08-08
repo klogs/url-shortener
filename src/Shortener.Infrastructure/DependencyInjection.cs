@@ -51,6 +51,9 @@ public static class DependencyInjection
         services.AddSingleton<IConnectionMultiplexer>(
             _ => ConnectionMultiplexer.Connect(redisOptions.ConnectionString));
         services.AddSingleton<IRedirectCache, RedirectCache>();
+        services.Configure<RateLimitOptions>(opts =>
+            configuration.GetSection(RateLimitOptions.SectionName).Bind(opts));
+        services.AddSingleton<IRedirectRateLimiter, RedisRedirectRateLimiter>();
 
         // Short code + captcha
         services.AddSingleton<IShortCodeGenerator, Base62ShortCodeGenerator>();

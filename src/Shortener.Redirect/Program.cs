@@ -31,9 +31,17 @@ app.MapGet("/{shortCode}", async (
     HttpContext ctx,
     ResolveRedirectHandler handler,
     IClickEventBuffer analyticsBuffer,
+    IRedirectRateLimiter rateLimiter,
     TimeProvider time,
     CancellationToken ct) =>
 {
+    var ip = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    if (!await rateLimiter.IsAllowedAsync(ip, ct))
+    {
+        ctx.Response.Headers.RetryAfter = "60";
+        return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+    }
+
     var normalizedHost = TenantDomain.NormalizeHost(ctx.Request.Host.Value ?? string.Empty);
     var query = new ResolveRedirectQuery(normalizedHost, shortCode);
     var resolution = await handler.HandleAsync(query, ct);

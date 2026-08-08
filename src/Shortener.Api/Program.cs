@@ -4,11 +4,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using Shortener.Api.Auth;
+using Shortener.Api.Endpoints.Abuse;
 using Shortener.Api.Endpoints.ApiKeys;
 using Shortener.Api.Endpoints.Domains;
 using Shortener.Api.Endpoints.Links;
 using Shortener.Api.Endpoints.PublicLinks;
 using Shortener.Api.Endpoints.Webhooks;
+using Shortener.Application.Abuse.Commands.CreateAbuseReport;
 using Shortener.Application.ApiKeys.Commands.CreateApiKey;
 using Shortener.Application.ApiKeys.Commands.RevokeApiKey;
 using Shortener.Application.ApiKeys.Queries.ListApiKeys;
@@ -19,7 +21,9 @@ using Shortener.Application.Domains.Queries.ListDomains;
 using Shortener.Application.Interfaces;
 using Shortener.Application.Links.Commands.BulkCreateLinks;
 using Shortener.Application.Links.Commands.CreateLink;
+using Shortener.Application.Links.Commands.BlockLink;
 using Shortener.Application.Links.Commands.DeleteLink;
+using Shortener.Application.Links.Commands.UnblockLink;
 using Shortener.Application.Links.Commands.UpdateLink;
 using Shortener.Application.Links.Queries.GetLink;
 using Shortener.Application.Links.Queries.ListLinks;
@@ -68,6 +72,11 @@ builder.Services.AddScoped<RemoveDomainHandler>();
 builder.Services.AddScoped<CreateApiKeyHandler>();
 builder.Services.AddScoped<ListApiKeysHandler>();
 builder.Services.AddScoped<RevokeApiKeyHandler>();
+
+// Block / unblock / abuse report handlers
+builder.Services.AddScoped<BlockLinkHandler>();
+builder.Services.AddScoped<UnblockLinkHandler>();
+builder.Services.AddScoped<CreateAbuseReportHandler>();
 
 // Bulk create handler
 builder.Services.AddScoped<BulkCreateLinksHandler>();
@@ -120,6 +129,19 @@ builder.Services.AddRateLimiter(rateLimiter =>
         options.PermitLimit = rateLimitOptions.PublicCreatePerMinute;
         options.Window = TimeSpan.FromMinutes(1);
         options.SegmentsPerWindow = 6;
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 0;
+    });
+
+    rateLimiter.AddSlidingWindowLimiter("public-reports", options =>
+    {
+        var rateLimitOptions = builder.Configuration
+            .GetSection(RateLimitOptions.SectionName)
+            .Get<RateLimitOptions>() ?? new RateLimitOptions();
+
+        options.PermitLimit = rateLimitOptions.PublicReportPerMinute;
+        options.Window = TimeSpan.FromMinutes(1);
+        options.SegmentsPerWindow = 4;
         options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         options.QueueLimit = 0;
     });
@@ -568,6 +590,80 @@ webhooks.MapDelete("/{id:guid}", async (
         return Results.NotFound();
     }
 });
+
+// ── Authenticated: block / unblock link ──────────────────────────────────────
+
+links.MapPost("/{id:guid}/block", async (
+    Guid id,
+    ClaimsPrincipal user,
+    BlockLinkHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    var userId = ResolveUserId(user);
+    if (tenantId is null || userId is null)
+    {
+        return Results.Forbid();
+    }
+
+    try
+    {
+        await handler.HandleAsync(new BlockLinkCommand(id, tenantId.Value, userId.Value), ct);
+        return Results.NoContent();
+    }
+    catch (InvalidOperationException)
+    {
+        return Results.NotFound();
+    }
+});
+
+links.MapPost("/{id:guid}/unblock", async (
+    Guid id,
+    ClaimsPrincipal user,
+    UnblockLinkHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    var userId = ResolveUserId(user);
+    if (tenantId is null || userId is null)
+    {
+        return Results.Forbid();
+    }
+
+    try
+    {
+        await handler.HandleAsync(new UnblockLinkCommand(id, tenantId.Value, userId.Value), ct);
+        return Results.NoContent();
+    }
+    catch (InvalidOperationException ex)
+    {
+        var status = ex.Message.Contains("not found") ? StatusCodes.Status404NotFound : StatusCodes.Status422UnprocessableEntity;
+        return Results.Problem(ex.Message, statusCode: status);
+    }
+});
+
+// ── Public: abuse report ──────────────────────────────────────────────────────
+
+app.MapPost("/api/v1/public/reports", async (
+    CreateAbuseReportRequest request,
+    HttpContext ctx,
+    CreateAbuseReportHandler handler,
+    CancellationToken ct) =>
+{
+    var normalizedHost = TenantDomain.NormalizeHost(ctx.Request.Host.Value ?? string.Empty);
+    var reporterIp = ctx.Connection.RemoteIpAddress?.ToString();
+
+    try
+    {
+        var command = new CreateAbuseReportCommand(request.ShortCode, normalizedHost, reporterIp, request.Reason);
+        await handler.HandleAsync(command, ct);
+        return Results.NoContent();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status404NotFound);
+    }
+}).RequireRateLimiting("public-reports");
 
 app.Run();
 

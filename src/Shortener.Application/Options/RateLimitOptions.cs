@@ -6,4 +6,6 @@ public sealed class RateLimitOptions
 
     public int PublicCreatePerMinute { get; init; } = 5;
     public int PublicCreatePerHour { get; init; } = 30;
+    public int PublicReportPerMinute { get; init; } = 3;
+    public int RedirectPerMinutePerIp { get; init; } = 200;
 }
