@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
+using QRCoder;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
@@ -640,6 +641,53 @@ links.MapPost("/{id:guid}/unblock", async (
         var status = ex.Message.Contains("not found") ? StatusCodes.Status404NotFound : StatusCodes.Status422UnprocessableEntity;
         return Results.Problem(ex.Message, statusCode: status);
     }
+});
+
+// ── Authenticated: QR code ───────────────────────────────────────────────────
+
+links.MapGet("/{id:guid}/qr", async (
+    Guid id,
+    ClaimsPrincipal user,
+    GetLinkHandler getLinkHandler,
+    IDomainRepository domainRepository,
+    string format = "png",
+    int size = 10,
+    CancellationToken ct = default) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    var link = await getLinkHandler.HandleAsync(new GetLinkQuery(id, tenantId.Value), ct);
+    if (link is null)
+    {
+        return Results.NotFound();
+    }
+
+    var domain = await domainRepository.GetByIdAsync(link.DomainId, tenantId.Value, ct);
+    if (domain is null)
+    {
+        return Results.NotFound();
+    }
+
+    var shortUrl = $"https://{domain.Host}/{link.ShortCode}";
+    var clampedSize = Math.Clamp(size, 1, 20);
+
+    using var qrGenerator = new QRCodeGenerator();
+    var qrData = qrGenerator.CreateQrCode(shortUrl, QRCodeGenerator.ECCLevel.Q);
+
+    if (format.Equals("svg", StringComparison.OrdinalIgnoreCase))
+    {
+        using var svgCode = new SvgQRCode(qrData);
+        var svg = svgCode.GetGraphic(clampedSize);
+        return Results.Content(svg, "image/svg+xml");
+    }
+
+    using var pngCode = new PngByteQRCode(qrData);
+    var png = pngCode.GetGraphic(clampedSize);
+    return Results.File(png, "image/png");
 });
 
 // ── Public: abuse report ──────────────────────────────────────────────────────

@@ -192,6 +192,20 @@ Before approving, confirm all of the following:
 | RevenueOrTeamLimit | No |
 | ApprovedAt | 2026-08-08 |
 
+### QRCoder `1.6.0`
+
+| Field | Value |
+|---|---|
+| Package | `QRCoder` |
+| Version | `1.6.0` |
+| License | MIT |
+| Repository | https://github.com/codebude/QRCoder |
+| Purpose | Server-side QR code generation (PNG + SVG) for short link QR endpoint |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-08 |
+
 ---
 
 ## Pending / Under Review
