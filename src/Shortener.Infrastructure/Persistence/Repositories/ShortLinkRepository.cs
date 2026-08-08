@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Shortener.Application.Interfaces;
 using Shortener.Domain.Entities;
+using Shortener.Domain.Enums;
 
 namespace Shortener.Infrastructure.Persistence.Repositories;
 
@@ -21,6 +22,30 @@ internal sealed class ShortLinkRepository(ShortenerDbContext db) : IShortLinkRep
 
     public Task<bool> AliasExistsAsync(Guid domainId, string shortCode, CancellationToken ct)
         => db.ShortLinks.AnyAsync(l => l.DomainId == domainId && l.ShortCode == shortCode, ct);
+
+    public async Task<(IReadOnlyList<ShortLink> Items, bool HasMore)> ListAsync(
+        Guid tenantId, int pageSize, Guid? afterId, CancellationToken ct)
+    {
+        var query = db.ShortLinks
+            .Where(l => l.TenantId == tenantId && l.Status != LinkStatus.Deleted)
+            .OrderByDescending(l => l.CreatedAtUtc)
+            .ThenBy(l => l.Id);
+
+        if (afterId.HasValue)
+        {
+            var cursor = await db.ShortLinks.FindAsync([afterId.Value], ct);
+            if (cursor is not null)
+            {
+                query = (IOrderedQueryable<ShortLink>)query.Where(
+                    l => l.CreatedAtUtc < cursor.CreatedAtUtc ||
+                         (l.CreatedAtUtc == cursor.CreatedAtUtc && l.Id > cursor.Id));
+            }
+        }
+
+        var items = await query.Take(pageSize + 1).ToListAsync(ct);
+        var hasMore = items.Count > pageSize;
+        return (items.Take(pageSize).ToList(), hasMore);
+    }
 
     public async Task InsertAsync(ShortLink link, CancellationToken ct)
     {

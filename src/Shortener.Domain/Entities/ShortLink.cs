@@ -131,5 +131,32 @@ public sealed class ShortLink
         UpdatedAtUtc = now;
     }
 
+    public void UpdateTitle(string? title, Guid updatedBy, DateTimeOffset now)
+    {
+        Title = title;
+        UpdatedBy = updatedBy;
+        UpdatedAtUtc = now;
+    }
+
+    public void UpdateExpiry(DateTimeOffset? expiresAt, Guid updatedBy, DateTimeOffset now)
+    {
+        ExpiresAt = expiresAt;
+        // Re-activate if previously marked Expired and new expiry is in the future
+        if (Status == LinkStatus.Expired && (expiresAt is null || expiresAt.Value > now))
+        {
+            Status = LinkStatus.Active;
+        }
+
+        UpdatedBy = updatedBy;
+        UpdatedAtUtc = now;
+    }
+
+    public void UpdateRedirectType(RedirectType redirectType, Guid updatedBy, DateTimeOffset now)
+    {
+        RedirectType = redirectType;
+        UpdatedBy = updatedBy;
+        UpdatedAtUtc = now;
+    }
+
     public void IncrementClickSnapshot() => ClickCountSnapshot++;
 }
