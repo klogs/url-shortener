@@ -108,6 +108,20 @@ Before approving, confirm all of the following:
 | RevenueOrTeamLimit | No |
 | ApprovedAt | 2026-08-08 |
 
+### Microsoft.AspNetCore.Authentication.JwtBearer `10.0.0`
+
+| Field | Value |
+|---|---|
+| Package | `Microsoft.AspNetCore.Authentication.JwtBearer` |
+| Version | `10.0.0` |
+| License | MIT |
+| Repository | https://github.com/dotnet/aspnetcore |
+| Purpose | OIDC JWT bearer authentication for Shortener.Api |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-08 |
+
 ### Microsoft.EntityFrameworkCore.Design `10.0.3`
 
 | Field | Value |

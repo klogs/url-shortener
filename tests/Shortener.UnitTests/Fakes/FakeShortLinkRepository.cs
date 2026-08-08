@@ -16,6 +16,18 @@ internal sealed class FakeShortLinkRepository : IShortLinkRepository
     public Task<bool> AliasExistsAsync(Guid domainId, string shortCode, CancellationToken ct)
         => Task.FromResult(_store.Any(l => l.DomainId == domainId && l.ShortCode == shortCode));
 
+    public Task<(IReadOnlyList<ShortLink> Items, bool HasMore)> ListAsync(
+        Guid tenantId, int pageSize, Guid? afterId, CancellationToken ct)
+    {
+        var items = _store
+            .Where(l => l.TenantId == tenantId)
+            .OrderByDescending(l => l.CreatedAtUtc)
+            .Take(pageSize + 1)
+            .ToList();
+        var hasMore = items.Count > pageSize;
+        return Task.FromResult(((IReadOnlyList<ShortLink>)items.Take(pageSize).ToList(), hasMore));
+    }
+
     public Task InsertAsync(ShortLink link, CancellationToken ct)
     {
         _store.Add(link);
