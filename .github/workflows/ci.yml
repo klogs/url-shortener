@@ -1,0 +1,156 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+
+  # ─── Backend ───────────────────────────────────────────────────────────────
+
+  backend-build:
+    name: Backend — Build & Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Unit tests
+        run: dotnet test tests/Shortener.UnitTests --no-build --configuration Release --logger "trx;LogFileName=unit-results.xml"
+
+      - name: Architecture tests
+        run: dotnet test tests/Shortener.ArchitectureTests --no-build --configuration Release --logger "trx;LogFileName=arch-results.xml"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: "**/*.trx"
+
+  backend-integration:
+    name: Backend — Integration Tests
+    runs-on: ubuntu-latest
+    needs: backend-build
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: shortener_test
+          POSTGRES_USER: shortener
+          POSTGRES_PASSWORD: shortener_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U shortener -d shortener_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      Database__ConnectionString: "Host=localhost;Port=5432;Database=shortener_test;Username=shortener;Password=shortener_test"
+      Redis__ConnectionString: "localhost:6379"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Integration tests
+        run: dotnet test tests/Shortener.IntegrationTests --no-build --configuration Release --logger "trx;LogFileName=integration-results.xml"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: "**/*.trx"
+
+  # ─── Frontend ──────────────────────────────────────────────────────────────
+
+  frontend:
+    name: Frontend — Lint & Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web/shortener-web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: web/shortener-web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/shortener-web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8080
+          NEXT_PUBLIC_CAPTCHA_SITE_KEY: 1x00000000000000000000AA
+
+  # ─── Gate ──────────────────────────────────────────────────────────────────
+
+  ci-pass:
+    name: CI Pass
+    runs-on: ubuntu-latest
+    needs: [backend-build, backend-integration, frontend]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.backend-build.result }}" != "success" ||
+                "${{ needs.backend-integration.result }}" != "success" ||
+                "${{ needs.frontend.result }}" != "success" ]]; then
+            echo "One or more CI jobs failed."
+            exit 1
+          fi
+          echo "All CI jobs passed."
