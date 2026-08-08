@@ -29,6 +29,8 @@ export interface LinkDetail extends LinkSummary {
   redirectType: number;
   updatedAtUtc: string | null;
   domainId: string;
+  lastAccessedAt: string | null;
+  clickCountSnapshot: number;
 }
 
 export interface LinksResult {

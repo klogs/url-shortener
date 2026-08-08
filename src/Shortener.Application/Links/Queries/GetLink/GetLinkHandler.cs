@@ -16,6 +16,7 @@ public sealed class GetLinkHandler(IShortLinkRepository links)
             link.Id, link.DomainId, link.ShortCode, link.DestinationUrl,
             link.Title, link.Description, link.Status.ToString(), link.RedirectType,
             link.IsAnonymous, link.CreatedAtUtc, link.CreatedBy, link.UpdatedAtUtc,
-            link.ExpiresAt, link.LastAccessedAt, link.ClickCountSnapshot);
+            link.ExpiresAt, link.LastAccessedAt, link.ClickCountSnapshot,
+            link.IsAbTest, link.HasGeoRoutes);
     }
 }

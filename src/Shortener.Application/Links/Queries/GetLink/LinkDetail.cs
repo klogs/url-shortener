@@ -17,4 +17,6 @@ public sealed record LinkDetail(
     DateTimeOffset UpdatedAtUtc,
     DateTimeOffset? ExpiresAt,
     DateTimeOffset? LastAccessedAt,
-    long ClickCountSnapshot);
+    long ClickCountSnapshot,
+    bool IsAbTest,
+    bool HasGeoRoutes);
