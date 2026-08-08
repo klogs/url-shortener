@@ -80,6 +80,48 @@ Before approving, confirm all of the following:
 | RevenueOrTeamLimit | No |
 | ApprovedAt | 2026-08-08 |
 
+### Npgsql.EntityFrameworkCore.PostgreSQL `10.0.3`
+
+| Field | Value |
+|---|---|
+| Package | `Npgsql.EntityFrameworkCore.PostgreSQL` |
+| Version | `10.0.3` |
+| License | PostgreSQL License |
+| Repository | https://github.com/npgsql/efcore.pg |
+| Purpose | EF Core provider for PostgreSQL |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-08 |
+
+### Microsoft.Extensions.Configuration.Binder `10.0.0`
+
+| Field | Value |
+|---|---|
+| Package | `Microsoft.Extensions.Configuration.Binder` |
+| Version | `10.0.0` |
+| License | MIT |
+| Repository | https://github.com/dotnet/runtime |
+| Purpose | `IConfiguration.Get<T>()` extension for strongly-typed options binding |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-08 |
+
+### StackExchange.Redis `2.8.41`
+
+| Field | Value |
+|---|---|
+| Package | `StackExchange.Redis` |
+| Version | `2.8.41` |
+| License | MIT |
+| Repository | https://github.com/StackExchange/StackExchange.Redis |
+| Purpose | Redis client for redirect cache (IRedirectCache implementation) |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-08 |
+
 ---
 
 ## Pending / Under Review
