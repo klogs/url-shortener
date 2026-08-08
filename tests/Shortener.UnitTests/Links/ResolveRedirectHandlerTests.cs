@@ -17,8 +17,9 @@ public sealed class ResolveRedirectHandlerTests
     private static ResolveRedirectHandler CreateHandler(
         IShortLinkRepository links,
         IRedirectCache cache,
+        ILinkVariantRepository? variants = null,
         TimeProvider? time = null)
-        => new(links, cache, time ?? TimeProvider.System);
+        => new(links, variants ?? new FakeLinkVariantRepository(), cache, time ?? TimeProvider.System);
 
     private static ShortLink ActiveLink(DateTimeOffset? expiresAt = null)
         => ShortLink.CreateAnonymous(TenantId, DomainId, Code, "https://dest.example.com",

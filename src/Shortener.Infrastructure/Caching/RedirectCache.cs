@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using Shortener.Application.Interfaces;
@@ -13,6 +14,10 @@ internal sealed class RedirectCache(IConnectionMultiplexer redis, IOptions<Redis
     // Key format: sl:{normalizedHost}:{shortCode}
     private static string CacheKey(string normalizedHost, string shortCode)
         => $"sl:{normalizedHost}:{shortCode}";
+
+    // Variant cache key: sl:ab:{normalizedHost}:{shortCode}
+    private static string VariantKey(string normalizedHost, string shortCode)
+        => $"sl:ab:{normalizedHost}:{shortCode}";
 
     // Negative cache sentinel: empty DestinationUrl
     private const string NegativeSentinel = "";
@@ -37,13 +42,14 @@ internal sealed class RedirectCache(IConnectionMultiplexer redis, IOptions<Redis
         var linkId = map.TryGetValue("id", out var idStr) && Guid.TryParse(idStr, out var id) ? id : Guid.Empty;
         var status = map.TryGetValue("status", out var s) ? s : "Active";
         var redirectCode = map.TryGetValue("rtype", out var rt) && int.TryParse(rt, out var rc) ? rc : 302;
+        var isAbTest = map.TryGetValue("ab", out var abStr) && abStr == "1";
         DateTimeOffset? expiresAt = null;
         if (map.TryGetValue("exp", out var expStr) && DateTimeOffset.TryParse(expStr, out var exp))
         {
             expiresAt = exp;
         }
 
-        return new CachedRedirect(linkId, dest, status, expiresAt, redirectCode);
+        return new CachedRedirect(linkId, dest, status, expiresAt, redirectCode, isAbTest);
     }
 
     public async Task SetAsync(string normalizedHost, string shortCode, CachedRedirect value,
@@ -58,6 +64,7 @@ internal sealed class RedirectCache(IConnectionMultiplexer redis, IOptions<Redis
             new("dest", value.DestinationUrl),
             new("status", value.Status),
             new("rtype", value.RedirectStatusCode.ToString()),
+            new("ab", value.IsAbTest ? "1" : "0"),
         ];
 
         if (value.ExpiresAt.HasValue)
@@ -81,6 +88,31 @@ internal sealed class RedirectCache(IConnectionMultiplexer redis, IOptions<Redis
 
     public Task RemoveAsync(string normalizedHost, string shortCode, CancellationToken ct)
         => _db.KeyDeleteAsync(CacheKey(normalizedHost, shortCode));
+
+    public async Task<IReadOnlyList<CachedVariant>?> GetVariantsAsync(
+        string normalizedHost, string shortCode, CancellationToken ct)
+    {
+        var json = await _db.StringGetAsync(VariantKey(normalizedHost, shortCode));
+        if (json.IsNullOrEmpty)
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<List<CachedVariant>>(json.ToString());
+    }
+
+    public async Task SetVariantsAsync(
+        string normalizedHost, string shortCode, IReadOnlyList<CachedVariant> variants, CancellationToken ct)
+    {
+        var json = JsonSerializer.Serialize(variants);
+        await _db.StringSetAsync(
+            VariantKey(normalizedHost, shortCode),
+            json,
+            TimeSpan.FromSeconds(_opts.RedirectCacheTtlSeconds));
+    }
+
+    public Task RemoveVariantsAsync(string normalizedHost, string shortCode, CancellationToken ct)
+        => _db.KeyDeleteAsync(VariantKey(normalizedHost, shortCode));
 
     private static TimeSpan ComputeTtl(DateTimeOffset? linkExpiresAt, int defaultTtlSeconds)
     {

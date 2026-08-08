@@ -29,6 +29,9 @@ using Shortener.Application.Links.Commands.UpdateLink;
 using Shortener.Application.Links.Queries.GetLink;
 using Shortener.Application.Links.Queries.ListLinks;
 using Shortener.Application.Options;
+using Shortener.Application.Variants.Commands.CreateVariant;
+using Shortener.Application.Variants.Commands.DeleteVariant;
+using Shortener.Application.Variants.Queries;
 using Shortener.Application.Webhooks.Commands.CreateWebhook;
 using Shortener.Application.Webhooks.Commands.DeleteWebhook;
 using Shortener.Application.Webhooks.Commands.UpdateWebhook;
@@ -73,6 +76,11 @@ builder.Services.AddScoped<RemoveDomainHandler>();
 builder.Services.AddScoped<CreateApiKeyHandler>();
 builder.Services.AddScoped<ListApiKeysHandler>();
 builder.Services.AddScoped<RevokeApiKeyHandler>();
+
+// Variant (A/B) handlers
+builder.Services.AddScoped<CreateVariantHandler>();
+builder.Services.AddScoped<DeleteVariantHandler>();
+builder.Services.AddScoped<ListVariantsHandler>();
 
 // Block / unblock / abuse report handlers
 builder.Services.AddScoped<BlockLinkHandler>();
@@ -584,6 +592,77 @@ webhooks.MapDelete("/{id:guid}", async (
     try
     {
         await handler.HandleAsync(new DeleteWebhookCommand(id, tenantId.Value), ct);
+        return Results.NoContent();
+    }
+    catch (InvalidOperationException)
+    {
+        return Results.NotFound();
+    }
+});
+
+// ── Authenticated: A/B variants ──────────────────────────────────────────────
+
+links.MapGet("/{id:guid}/variants", async (
+    Guid id,
+    ClaimsPrincipal user,
+    ListVariantsHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    var result = await handler.HandleAsync(new ListVariantsQuery(id, tenantId.Value), ct);
+    return Results.Ok(result);
+});
+
+links.MapPost("/{id:guid}/variants", async (
+    Guid id,
+    CreateVariantRequest request,
+    ClaimsPrincipal user,
+    CreateVariantHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    try
+    {
+        var command = new CreateVariantCommand(id, tenantId.Value, request.Label, request.DestinationUrl, request.Weight);
+        var result = await handler.HandleAsync(command, ct);
+        return Results.Created($"/api/v1/links/{id}/variants/{result.Id}", result);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status404NotFound);
+    }
+});
+
+links.MapDelete("/{id:guid}/variants/{variantId:guid}", async (
+    Guid id,
+    Guid variantId,
+    ClaimsPrincipal user,
+    DeleteVariantHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    try
+    {
+        await handler.HandleAsync(new DeleteVariantCommand(variantId, tenantId.Value), ct);
         return Results.NoContent();
     }
     catch (InvalidOperationException)

@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
         services.AddScoped<IWebhookRepository, WebhookRepository>();
         services.AddScoped<IAbuseReportRepository, AbuseReportRepository>();
+        services.AddScoped<ILinkVariantRepository, LinkVariantRepository>();
         services.AddScoped<IApiKeyAuthenticator, ApiKeyAuthenticator>();
 
         // URL blocklist (reads from AbuseOptions.BlockedHosts at startup)

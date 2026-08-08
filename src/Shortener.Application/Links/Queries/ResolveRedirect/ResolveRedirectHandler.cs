@@ -5,6 +5,7 @@ namespace Shortener.Application.Links.Queries.ResolveRedirect;
 
 public sealed class ResolveRedirectHandler(
     IShortLinkRepository links,
+    ILinkVariantRepository variants,
     IRedirectCache cache,
     TimeProvider time)
 {
@@ -16,7 +17,18 @@ public sealed class ResolveRedirectHandler(
         var cached = await cache.GetAsync(query.NormalizedHost, query.ShortCode, ct);
         if (cached is not null)
         {
-            return ResolveCached(cached, now);
+            var resolution = ResolveCached(cached, now);
+            if (resolution.Outcome == RedirectOutcome.Redirect && cached.IsAbTest)
+            {
+                var destination = await ResolveAbVariantAsync(
+                    query.NormalizedHost, query.ShortCode, cached.LinkId, resolution.TenantId, ct);
+                if (!string.IsNullOrEmpty(destination))
+                {
+                    return resolution with { DestinationUrl = destination };
+                }
+            }
+
+            return resolution;
         }
 
         // 2. PostgreSQL fallback
@@ -33,7 +45,8 @@ public sealed class ResolveRedirectHandler(
             link.DestinationUrl,
             link.Status.ToString(),
             link.ExpiresAt,
-            (int)link.RedirectType);
+            (int)link.RedirectType,
+            link.IsAbTest);
 
         await cache.SetAsync(query.NormalizedHost, query.ShortCode, entry, link.ExpiresAt, ct);
 
@@ -53,8 +66,51 @@ public sealed class ResolveRedirectHandler(
             return new RedirectResolution(RedirectOutcome.Disabled);
         }
 
-        return new RedirectResolution(RedirectOutcome.Redirect, link.DestinationUrl, (int)link.RedirectType,
+        var destinationUrl = link.DestinationUrl;
+        if (link.IsAbTest)
+        {
+            destinationUrl = await ResolveAbVariantAsync(
+                query.NormalizedHost, query.ShortCode, link.Id, link.TenantId, ct);
+        }
+
+        return new RedirectResolution(RedirectOutcome.Redirect, destinationUrl, (int)link.RedirectType,
             LinkId: link.Id, TenantId: link.TenantId);
+    }
+
+    private async Task<string> ResolveAbVariantAsync(
+        string normalizedHost, string shortCode, Guid linkId, Guid? tenantId, CancellationToken ct)
+    {
+        var cached = await cache.GetVariantsAsync(normalizedHost, shortCode, ct);
+        if (cached is null || cached.Count == 0)
+        {
+            var dbVariants = await variants.ListByLinkAsync(linkId, tenantId ?? Guid.Empty, ct);
+            if (dbVariants.Count == 0)
+            {
+                // No variants configured — fall through to default URL
+                return string.Empty;
+            }
+
+            cached = dbVariants.Select(v => new CachedVariant(v.Weight, v.DestinationUrl)).ToList();
+            await cache.SetVariantsAsync(normalizedHost, shortCode, cached, ct);
+        }
+
+        return PickWeightedVariant(cached);
+    }
+
+    private static string PickWeightedVariant(IReadOnlyList<CachedVariant> variantList)
+    {
+        var total = variantList.Sum(v => v.Weight);
+        var r = Random.Shared.Next(total);
+        foreach (var v in variantList)
+        {
+            r -= v.Weight;
+            if (r < 0)
+            {
+                return v.DestinationUrl;
+            }
+        }
+
+        return variantList[^1].DestinationUrl;
     }
 
     private static RedirectResolution ResolveCached(CachedRedirect cached, DateTimeOffset now)
