@@ -14,9 +14,11 @@ import {
   listGeoRoutes,
   createGeoRoute,
   deleteGeoRoute,
+  getLinkAnalytics,
   type LinkDetail,
   type VariantDto,
   type GeoRouteDto,
+  type LinkAnalytics,
 } from "@/lib/api";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -63,6 +65,9 @@ export default function LinkDetailPage({ params }: { params: Promise<PageParams>
   const [newGeoUrl, setNewGeoUrl] = useState("");
   const [geoError, setGeoError] = useState<string | null>(null);
 
+  // Analytics state
+  const [analytics, setAnalytics] = useState<LinkAnalytics | null>(null);
+
   const token = session?.accessToken;
 
   useEffect(() => {
@@ -72,7 +77,8 @@ export default function LinkDetailPage({ params }: { params: Promise<PageParams>
       getLink(token, id),
       listVariants(token, id).catch(() => [] as VariantDto[]),
       listGeoRoutes(token, id).catch(() => [] as GeoRouteDto[]),
-    ]).then(([linkData, variantData, geoData]) => {
+      getLinkAnalytics(token, id, 30).catch(() => null),
+    ]).then(([linkData, variantData, geoData, analyticsData]) => {
       if (!linkData) {
         setNotFound(true);
       } else {
@@ -86,6 +92,7 @@ export default function LinkDetailPage({ params }: { params: Promise<PageParams>
         );
         setVariants(variantData);
         setGeoRoutes(geoData);
+        setAnalytics(analyticsData);
       }
     }).finally(() => setLoading(false));
   }, [id, token, status]);
@@ -356,6 +363,19 @@ export default function LinkDetailPage({ params }: { params: Promise<PageParams>
         )}
       </div>
 
+      {/* Analytics sparkline */}
+      {analytics && (
+        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold">Clicks (last {analytics.days} days)</h2>
+            <span className="text-sm font-semibold tabular-nums">
+              {analytics.total.toLocaleString()}
+            </span>
+          </div>
+          <Sparkline series={analytics.series} />
+        </div>
+      )}
+
       {/* A/B variants */}
       <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 space-y-4">
         <h2 className="text-sm font-semibold">
@@ -572,5 +592,68 @@ function Chip({ color, children }: { color: "purple" | "blue"; children: React.R
     <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
       {children}
     </span>
+  );
+}
+
+function Sparkline({ series }: { series: { date: string; count: number }[] }) {
+  const W = 480;
+  const H = 60;
+  const PAD = 4;
+
+  if (series.length === 0) {
+    return <p className="text-xs text-zinc-400">No click data yet.</p>;
+  }
+
+  const max = Math.max(...series.map((p) => p.count), 1);
+  const xs = series.map((_, i) => PAD + (i / Math.max(series.length - 1, 1)) * (W - PAD * 2));
+  const ys = series.map((p) => PAD + (1 - p.count / max) * (H - PAD * 2));
+
+  const line = xs.map((x, i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(" ");
+  const area =
+    `${line} L${xs[xs.length - 1].toFixed(1)},${(H - PAD).toFixed(1)} L${xs[0].toFixed(1)},${(H - PAD).toFixed(1)} Z`;
+
+  const labelEvery = Math.ceil(series.length / 5);
+  const labels = series
+    .map((p, i) => ({ x: xs[i], label: p.date.slice(5), i }))
+    .filter((_, i) => i % labelEvery === 0 || i === series.length - 1);
+
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H + 16}`}
+      className="w-full"
+      aria-label="Clicks sparkline"
+    >
+      <defs>
+        <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.15" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill="url(#spark-fill)" className="text-zinc-700 dark:text-zinc-300" />
+      <path
+        d={line}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        className="text-zinc-700 dark:text-zinc-300"
+      />
+      {labels.map(({ x, label }) => (
+        <text
+          key={label}
+          x={x}
+          y={H + 12}
+          textAnchor="middle"
+          fontSize="9"
+          className="fill-zinc-400"
+        >
+          {label}
+        </text>
+      ))}
+      {series.map((p, i) => (
+        <title key={i}>{`${p.date}: ${p.count}`}</title>
+      ))}
+    </svg>
   );
 }

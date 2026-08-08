@@ -37,4 +37,25 @@ internal sealed class ClickEventRepository(IOptions<DatabaseOptions> dbOpts) : I
             },
             cancellationToken: ct));
     }
+
+    public async Task<IReadOnlyList<DailyClickCount>> GetDailyCountsAsync(
+        Guid linkId, Guid tenantId, DateTimeOffset from, DateTimeOffset to, CancellationToken ct = default)
+    {
+        await using var conn = new NpgsqlConnection(_connectionString);
+        var rows = await conn.QueryAsync<(DateOnly Date, long Count)>(new CommandDefinition(
+            """
+            SELECT DATE(occurred_at_utc) AS date, COUNT(*) AS count
+            FROM click_events
+            WHERE link_id = @LinkId
+              AND tenant_id = @TenantId
+              AND occurred_at_utc >= @From
+              AND occurred_at_utc < @To
+            GROUP BY DATE(occurred_at_utc)
+            ORDER BY date
+            """,
+            new { LinkId = linkId, TenantId = tenantId, From = from, To = to },
+            cancellationToken: ct));
+
+        return rows.Select(r => new DailyClickCount(r.Date, r.Count)).ToList();
+    }
 }

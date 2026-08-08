@@ -32,6 +32,7 @@ using Shortener.Application.Options;
 using Shortener.Application.GeoRoutes.Commands.CreateGeoRoute;
 using Shortener.Application.GeoRoutes.Commands.DeleteGeoRoute;
 using Shortener.Application.GeoRoutes.Queries;
+using Shortener.Application.Links.Queries.GetLinkAnalytics;
 using Shortener.Application.Links.Queries.GetTenantStats;
 using Shortener.Application.Variants.Commands.CreateVariant;
 using Shortener.Application.Variants.Commands.DeleteVariant;
@@ -91,8 +92,9 @@ builder.Services.AddScoped<CreateGeoRouteHandler>();
 builder.Services.AddScoped<DeleteGeoRouteHandler>();
 builder.Services.AddScoped<ListGeoRoutesHandler>();
 
-// Stats handler
+// Stats + analytics handlers
 builder.Services.AddScoped<GetTenantStatsHandler>();
+builder.Services.AddScoped<GetLinkAnalyticsHandler>();
 
 // Block / unblock / abuse report handlers
 builder.Services.AddScoped<BlockLinkHandler>();
@@ -867,6 +869,25 @@ links.MapGet("/{id:guid}/qr", async (
     using var pngCode = new PngByteQRCode(qrData);
     var png = pngCode.GetGraphic(clampedSize);
     return Results.File(png, "image/png");
+});
+
+// ── Authenticated: analytics ─────────────────────────────────────────────────
+
+links.MapGet("/{id:guid}/analytics", async (
+    Guid id,
+    ClaimsPrincipal user,
+    GetLinkAnalyticsHandler handler,
+    int days = 30,
+    CancellationToken ct = default) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    var result = await handler.HandleAsync(new GetLinkAnalyticsQuery(id, tenantId.Value, days), ct);
+    return Results.Ok(result);
 });
 
 // ── Public: abuse report ──────────────────────────────────────────────────────

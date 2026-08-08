@@ -243,3 +243,26 @@ export async function deleteGeoRoute(
   });
   if (!res.ok) throw new Error(`Failed to delete geo route (${res.status})`);
 }
+
+// ── Authenticated: analytics ──────────────────────────────────────────────────
+
+export interface DailyPoint {
+  date: string;
+  count: number;
+}
+
+export interface LinkAnalytics {
+  total: number;
+  days: number;
+  series: DailyPoint[];
+}
+
+export async function getLinkAnalytics(
+  token: string,
+  linkId: string,
+  days = 30
+): Promise<LinkAnalytics> {
+  const res = await apiFetch(`/api/v1/links/${linkId}/analytics?days=${days}`, token);
+  if (!res.ok) throw new Error(`Failed to load analytics (${res.status})`);
+  return res.json() as Promise<LinkAnalytics>;
+}
