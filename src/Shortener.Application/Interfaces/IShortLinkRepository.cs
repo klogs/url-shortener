@@ -12,4 +12,5 @@ public interface IShortLinkRepository
     Task<IReadOnlyList<ShortLink>> ListAboveReportThresholdAsync(int threshold, int batchSize, CancellationToken ct = default);
     Task InsertAsync(ShortLink link, CancellationToken ct = default);
     Task UpdateAsync(ShortLink link, CancellationToken ct = default);
+    Task DeleteAllByTenantAsync(Guid tenantId, CancellationToken ct = default);
 }

@@ -65,4 +65,9 @@ internal sealed class ShortLinkRepository(ShortenerDbContext db) : IShortLinkRep
         db.ShortLinks.Update(link);
         await db.SaveChangesAsync(ct);
     }
+
+    public async Task DeleteAllByTenantAsync(Guid tenantId, CancellationToken ct)
+        => await db.ShortLinks
+            .Where(l => l.TenantId == tenantId)
+            .ExecuteDeleteAsync(ct);
 }

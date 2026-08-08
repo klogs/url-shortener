@@ -38,6 +38,19 @@ internal sealed class ClickEventRepository(IOptions<DatabaseOptions> dbOpts) : I
             cancellationToken: ct));
     }
 
+    public async Task AnonymizeByTenantAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE click_events
+            SET remote_ip = NULL, user_agent = NULL, referer = NULL
+            WHERE tenant_id = @TenantId
+            """,
+            new { TenantId = tenantId },
+            cancellationToken: ct));
+    }
+
     public async Task<IReadOnlyList<DailyClickCount>> GetDailyCountsAsync(
         Guid linkId, Guid tenantId, DateTimeOffset from, DateTimeOffset to, CancellationToken ct = default)
     {

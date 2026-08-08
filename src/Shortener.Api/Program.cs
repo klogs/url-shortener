@@ -32,6 +32,7 @@ using Shortener.Application.Options;
 using Shortener.Application.GeoRoutes.Commands.CreateGeoRoute;
 using Shortener.Application.GeoRoutes.Commands.DeleteGeoRoute;
 using Shortener.Application.GeoRoutes.Queries;
+using Shortener.Application.Gdpr;
 using Shortener.Application.Links.Queries.GetLinkAnalytics;
 using Shortener.Application.Links.Queries.GetTenantStats;
 using Shortener.Application.Variants.Commands.CreateVariant;
@@ -96,6 +97,9 @@ builder.Services.AddScoped<ListGeoRoutesHandler>();
 // Stats + analytics handlers
 builder.Services.AddScoped<GetTenantStatsHandler>();
 builder.Services.AddScoped<GetLinkAnalyticsHandler>();
+
+// GDPR
+builder.Services.AddScoped<DeleteTenantDataHandler>();
 
 // Block / unblock / abuse report handlers
 builder.Services.AddScoped<BlockLinkHandler>();
@@ -892,6 +896,23 @@ links.MapGet("/{id:guid}/analytics", async (
     var result = await handler.HandleAsync(new GetLinkAnalyticsQuery(id, tenantId.Value, days), ct);
     return Results.Ok(result);
 });
+
+// ── GDPR: tenant data deletion ───────────────────────────────────────────────
+
+app.MapDelete("/api/v1/gdpr/my-data", async (
+    ClaimsPrincipal user,
+    DeleteTenantDataHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    await handler.HandleAsync(new DeleteTenantDataCommand(tenantId.Value), ct);
+    return Results.NoContent();
+}).RequireAuthorization();
 
 // ── Public: abuse report ──────────────────────────────────────────────────────
 
