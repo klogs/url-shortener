@@ -2,7 +2,7 @@ using Shortener.Application.Interfaces;
 
 namespace Shortener.Application.Links.Commands.UpdateLink;
 
-public sealed class UpdateLinkHandler(IShortLinkRepository links, TimeProvider time)
+public sealed class UpdateLinkHandler(IShortLinkRepository links, ILinkCacheInvalidator cacheInvalidator, TimeProvider time)
 {
     public async Task HandleAsync(UpdateLinkCommand cmd, CancellationToken ct = default)
     {
@@ -31,5 +31,6 @@ public sealed class UpdateLinkHandler(IShortLinkRepository links, TimeProvider t
         link.UpdateRedirectType(cmd.RedirectType, cmd.UpdatedBy, now);
 
         await links.UpdateAsync(link, ct);
+        await cacheInvalidator.InvalidateAsync(link.DomainId, link.TenantId, link.ShortCode, ct);
     }
 }

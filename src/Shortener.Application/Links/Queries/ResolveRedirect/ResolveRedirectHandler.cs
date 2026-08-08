@@ -27,15 +27,23 @@ public sealed class ResolveRedirectHandler(
             var resolution = ResolveCached(cached, now);
             if (resolution.Outcome == RedirectOutcome.Redirect)
             {
+                var before = resolution.DestinationUrl;
                 resolution = await ApplyGeoRoutingAsync(resolution, cached, query, ct);
+                var geoApplied = resolution.DestinationUrl != before;
+
                 if (resolution.Outcome == RedirectOutcome.Redirect && cached.IsAbTest)
                 {
                     var abDest = await ResolveAbVariantAsync(
                         query.NormalizedHost, query.ShortCode, cached.LinkId, resolution.TenantId, ct);
                     if (!string.IsNullOrEmpty(abDest))
                     {
-                        return resolution with { DestinationUrl = abDest };
+                        return resolution with { DestinationUrl = abDest, IsPersonalized = true };
                     }
+                }
+
+                if (geoApplied)
+                {
+                    return resolution with { IsPersonalized = true };
                 }
             }
 
@@ -81,12 +89,15 @@ public sealed class ResolveRedirectHandler(
 
         var destinationUrl = link.DestinationUrl;
 
+        var isPersonalized = false;
+
         if (link.HasGeoRoutes && !string.IsNullOrEmpty(query.ClientIp))
         {
             var geoUrl = await ResolveGeoRouteAsync(query.NormalizedHost, query.ShortCode, link.Id, link.TenantId, query.ClientIp, ct);
             if (!string.IsNullOrEmpty(geoUrl))
             {
                 destinationUrl = geoUrl;
+                isPersonalized = true;
             }
         }
 
@@ -97,11 +108,12 @@ public sealed class ResolveRedirectHandler(
             if (!string.IsNullOrEmpty(abUrl))
             {
                 destinationUrl = abUrl;
+                isPersonalized = true;
             }
         }
 
         return new RedirectResolution(RedirectOutcome.Redirect, destinationUrl, (int)link.RedirectType,
-            LinkId: link.Id, TenantId: link.TenantId);
+            LinkId: link.Id, TenantId: link.TenantId, IsPersonalized: isPersonalized);
     }
 
     private async Task<string> ResolveAbVariantAsync(

@@ -151,6 +151,25 @@ app.MapGet("/{shortCode}", async (
         Country: null));
 
     metrics.RedirectOutcomes.Add(1, new KeyValuePair<string, object?>("outcome", "redirect"));
+
+    var region = ctx.RequestServices.GetService<IConfiguration>()?["Shortener:Region"];
+    if (!string.IsNullOrEmpty(region))
+    {
+        ctx.Response.Headers["X-Served-By"] = region;
+    }
+
+    if (resolution.IsPersonalized)
+    {
+        ctx.Response.Headers.CacheControl = "no-store";
+    }
+    else
+    {
+        ctx.Response.Headers.CacheControl = "public, max-age=300, s-maxage=300";
+        ctx.Response.Headers["CDN-Cache-Control"] = "max-age=300";
+        ctx.Response.Headers["Surrogate-Control"] = "max-age=300";
+        ctx.Response.Headers["Surrogate-Key"] = $"sl:{normalizedHost}:{shortCode}";
+    }
+
     var url = resolution.DestinationUrl!;
     return resolution.StatusCode switch
     {

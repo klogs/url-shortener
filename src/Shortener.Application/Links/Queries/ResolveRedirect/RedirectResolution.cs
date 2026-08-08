@@ -7,4 +7,5 @@ public sealed record RedirectResolution(
     string? DestinationUrl = null,
     int StatusCode = 302,
     Guid? LinkId = null,
-    Guid? TenantId = null);
+    Guid? TenantId = null,
+    bool IsPersonalized = false);

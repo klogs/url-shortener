@@ -61,6 +61,8 @@ public static class DependencyInjection
         services.Configure<RateLimitOptions>(opts =>
             configuration.GetSection(RateLimitOptions.SectionName).Bind(opts));
         services.AddSingleton<IRedirectRateLimiter, RedisRedirectRateLimiter>();
+        services.AddSingleton<IEdgeCacheInvalidator, NoOpEdgeCacheInvalidator>();
+        services.AddScoped<ILinkCacheInvalidator, LinkCacheInvalidator>();
 
         // Short code + captcha
         services.AddSingleton<IShortCodeGenerator, Base62ShortCodeGenerator>();

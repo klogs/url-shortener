@@ -2,7 +2,7 @@ using Shortener.Application.Interfaces;
 
 namespace Shortener.Application.Links.Commands.DeleteLink;
 
-public sealed class DeleteLinkHandler(IShortLinkRepository links, TimeProvider time)
+public sealed class DeleteLinkHandler(IShortLinkRepository links, ILinkCacheInvalidator cacheInvalidator, TimeProvider time)
 {
     public async Task HandleAsync(DeleteLinkCommand cmd, CancellationToken ct = default)
     {
@@ -11,5 +11,6 @@ public sealed class DeleteLinkHandler(IShortLinkRepository links, TimeProvider t
 
         link.SoftDelete(cmd.DeletedBy, time.GetUtcNow());
         await links.UpdateAsync(link, ct);
+        await cacheInvalidator.InvalidateAsync(link.DomainId, link.TenantId, link.ShortCode, ct);
     }
 }

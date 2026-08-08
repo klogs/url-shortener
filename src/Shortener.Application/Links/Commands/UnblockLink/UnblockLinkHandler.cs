@@ -3,7 +3,7 @@ using Shortener.Domain.Enums;
 
 namespace Shortener.Application.Links.Commands.UnblockLink;
 
-public sealed class UnblockLinkHandler(IShortLinkRepository links, TimeProvider time)
+public sealed class UnblockLinkHandler(IShortLinkRepository links, ILinkCacheInvalidator cacheInvalidator, TimeProvider time)
 {
     public async Task HandleAsync(UnblockLinkCommand cmd, CancellationToken ct = default)
     {
@@ -17,5 +17,6 @@ public sealed class UnblockLinkHandler(IShortLinkRepository links, TimeProvider 
 
         link.Unblock(cmd.UnblockedBy, time.GetUtcNow());
         await links.UpdateAsync(link, ct);
+        await cacheInvalidator.InvalidateAsync(link.DomainId, link.TenantId, link.ShortCode, ct);
     }
 }
