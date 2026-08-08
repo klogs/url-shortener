@@ -31,6 +31,12 @@ internal sealed class FakeShortLinkRepository : IShortLinkRepository
     public Task<int> CountActiveByTenantAsync(Guid tenantId, CancellationToken ct)
         => Task.FromResult(_store.Count(l => l.TenantId == tenantId));
 
+    public Task<IReadOnlyList<ShortLink>> ListExpiringSoonAsync(
+        DateTimeOffset from, DateTimeOffset to, int batchSize, CancellationToken ct)
+        => Task.FromResult<IReadOnlyList<ShortLink>>(
+            _store.Where(l => l.ExpiresAt.HasValue && l.ExpiresAt >= from && l.ExpiresAt <= to)
+                  .Take(batchSize).ToList());
+
     public Task<IReadOnlyList<ShortLink>> ListAboveReportThresholdAsync(int threshold, int batchSize, CancellationToken ct)
         => Task.FromResult<IReadOnlyList<ShortLink>>(_store
             .Where(l => l.ReportCount >= threshold)

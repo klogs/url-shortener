@@ -60,5 +60,8 @@ builder.Services.Configure<AbuseOptions>(opts =>
     builder.Configuration.GetSection(AbuseOptions.SectionName).Bind(opts));
 builder.Services.AddHostedService<AbuseReportSweepWorker>();
 
+// Expiration: notify tenants of links expiring within 7 days
+builder.Services.AddHostedService<LinkExpirationSweepWorker>();
+
 var host = builder.Build();
 host.Run();

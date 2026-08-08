@@ -11,5 +11,6 @@ public interface IWebhookRepository
 
     Task InsertDeliveryAsync(WebhookDelivery delivery, CancellationToken ct = default);
     Task<IReadOnlyList<WebhookDelivery>> ListPendingDeliveriesAsync(DateTimeOffset now, int batchSize, CancellationToken ct = default);
+    Task<IReadOnlyList<WebhookDelivery>> ListDeliveriesByWebhookAsync(Guid webhookId, Guid tenantId, int pageSize, CancellationToken ct = default);
     Task UpdateDeliveryAsync(WebhookDelivery delivery, CancellationToken ct = default);
 }

@@ -10,6 +10,7 @@ public interface IShortLinkRepository
     Task<(IReadOnlyList<ShortLink> Items, bool HasMore)> ListAsync(
         Guid tenantId, int pageSize, Guid? afterId, CancellationToken ct = default);
     Task<int> CountActiveByTenantAsync(Guid tenantId, CancellationToken ct = default);
+    Task<IReadOnlyList<ShortLink>> ListExpiringSoonAsync(DateTimeOffset from, DateTimeOffset to, int batchSize, CancellationToken ct = default);
     Task<IReadOnlyList<ShortLink>> ListAboveReportThresholdAsync(int threshold, int batchSize, CancellationToken ct = default);
     Task InsertAsync(ShortLink link, CancellationToken ct = default);
     Task UpdateAsync(ShortLink link, CancellationToken ct = default);

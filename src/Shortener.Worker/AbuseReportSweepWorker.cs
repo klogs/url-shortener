@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Shortener.Application.Interfaces;
 using Shortener.Application.Options;
@@ -45,6 +46,7 @@ public sealed class AbuseReportSweepWorker(
         var links = scope.ServiceProvider.GetRequiredService<IShortLinkRepository>();
         var domains = scope.ServiceProvider.GetRequiredService<IDomainRepository>();
         var cache = scope.ServiceProvider.GetRequiredService<IRedirectCache>();
+        var dispatcher = scope.ServiceProvider.GetRequiredService<IWebhookDispatcher>();
 
         var candidates = await links.ListAboveReportThresholdAsync(threshold, BatchSize, ct);
         if (candidates.Count == 0)
@@ -72,6 +74,15 @@ public sealed class AbuseReportSweepWorker(
             {
                 await cache.RemoveAsync(domain.NormalizedHost, link.ShortCode, ct);
             }
+
+            var payload = JsonSerializer.Serialize(new
+            {
+                linkId = link.Id,
+                shortCode = link.ShortCode,
+                reportCount = link.ReportCount,
+                tenantId = link.TenantId,
+            });
+            await dispatcher.DispatchAsync(link.TenantId, "link.auto_blocked", payload, ct);
         }
     }
 }

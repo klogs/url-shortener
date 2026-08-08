@@ -50,6 +50,7 @@ using Shortener.Application.Billing;
 using Shortener.Application.Webhooks.Commands.CreateWebhook;
 using Shortener.Application.Webhooks.Commands.DeleteWebhook;
 using Shortener.Application.Webhooks.Commands.UpdateWebhook;
+using Shortener.Application.Webhooks.Queries;
 using Shortener.Application.Webhooks.Queries.ListWebhooks;
 using Shortener.Domain.Entities;
 using Serilog;
@@ -149,6 +150,9 @@ builder.Services.AddScoped<GetLinkAnalyticsHandler>();
 // Billing
 builder.Services.AddScoped<GetTenantUsageHandler>();
 builder.Services.AddScoped<ChangeTenantPlanHandler>();
+
+// Webhook deliveries
+builder.Services.AddScoped<GetWebhookDeliveriesHandler>();
 
 // GDPR
 builder.Services.AddScoped<DeleteTenantDataHandler>();
@@ -734,6 +738,23 @@ webhooks.MapDelete("/{id:guid}", async (
     {
         return Results.NotFound();
     }
+});
+
+webhooks.MapGet("/{id:guid}/deliveries", async (
+    Guid id,
+    ClaimsPrincipal user,
+    GetWebhookDeliveriesHandler handler,
+    int pageSize = 20,
+    CancellationToken ct = default) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    var result = await handler.HandleAsync(new GetWebhookDeliveriesQuery(id, tenantId.Value, pageSize), ct);
+    return Results.Ok(result);
 });
 
 // ── Authenticated: A/B variants ──────────────────────────────────────────────

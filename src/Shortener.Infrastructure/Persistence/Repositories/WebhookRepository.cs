@@ -46,4 +46,12 @@ internal sealed class WebhookRepository(ShortenerDbContext db) : IWebhookReposit
         db.WebhookDeliveries.Update(delivery);
         await db.SaveChangesAsync(ct);
     }
+
+    public async Task<IReadOnlyList<WebhookDelivery>> ListDeliveriesByWebhookAsync(
+        Guid webhookId, Guid tenantId, int pageSize, CancellationToken ct)
+        => await db.WebhookDeliveries
+            .Where(d => d.WebhookId == webhookId && d.TenantId == tenantId)
+            .OrderByDescending(d => d.CreatedAtUtc)
+            .Take(pageSize)
+            .ToListAsync(ct);
 }

@@ -244,6 +244,34 @@ export async function deleteGeoRoute(
   if (!res.ok) throw new Error(`Failed to delete geo route (${res.status})`);
 }
 
+// ── Authenticated: webhook deliveries ────────────────────────────────────────
+
+export interface WebhookDelivery {
+  id: string;
+  webhookId: string;
+  eventType: string;
+  status: string;
+  attemptCount: number;
+  lastHttpStatus: number | null;
+  lastResponseBody: string | null;
+  deliveredAt: string | null;
+  nextAttemptAt: string | null;
+  createdAtUtc: string;
+}
+
+export async function listWebhookDeliveries(
+  token: string,
+  webhookId: string,
+  pageSize = 20
+): Promise<WebhookDelivery[]> {
+  const res = await apiFetch(
+    `/api/v1/webhooks/${webhookId}/deliveries?pageSize=${pageSize}`,
+    token
+  );
+  if (!res.ok) throw new Error(`Failed to load deliveries (${res.status})`);
+  return res.json() as Promise<WebhookDelivery[]>;
+}
+
 // ── Authenticated: billing / usage ───────────────────────────────────────────
 
 export interface PlanLimits {

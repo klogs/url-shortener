@@ -15,6 +15,7 @@ using Shortener.Infrastructure.Persistence;
 using Shortener.Infrastructure.Persistence.Repositories;
 using Shortener.Infrastructure.Seeding;
 using Shortener.Infrastructure.ShortCodes;
+using Shortener.Infrastructure.Webhooks;
 
 namespace Shortener.Infrastructure;
 
@@ -43,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<ILinkStatsRepository, LinkStatsRepository>();
         services.AddScoped<IClickEventRepository, ClickEventRepository>();
         services.AddScoped<IApiKeyAuthenticator, ApiKeyAuthenticator>();
+        services.AddScoped<IWebhookDispatcher, WebhookDispatcher>();
 
         // URL blocklist (reads from AbuseOptions.BlockedHosts at startup)
         services.Configure<AbuseOptions>(opts =>
