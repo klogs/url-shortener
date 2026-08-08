@@ -220,6 +220,62 @@ Before approving, confirm all of the following:
 | RevenueOrTeamLimit | No |
 | ApprovedAt | 2026-08-08 |
 
+### AspNetCore.HealthChecks.Npgsql `9.0.0`
+
+| Field | Value |
+|---|---|
+| Package | `AspNetCore.HealthChecks.Npgsql` |
+| Version | `9.0.0` |
+| License | Apache-2.0 |
+| Repository | https://github.com/Xabaril/AspNetCore.Diagnostics.HealthChecks |
+| Purpose | PostgreSQL readiness check for Api and Redirect (`/health/ready`) |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-09 |
+
+### AspNetCore.HealthChecks.Redis `9.0.0`
+
+| Field | Value |
+|---|---|
+| Package | `AspNetCore.HealthChecks.Redis` |
+| Version | `9.0.0` |
+| License | Apache-2.0 |
+| Repository | https://github.com/Xabaril/AspNetCore.Diagnostics.HealthChecks |
+| Purpose | Redis readiness check for Api and Redirect (`/health/ready`) |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-09 |
+
+### AspNetCore.HealthChecks.RabbitMQ `9.0.0`
+
+| Field | Value |
+|---|---|
+| Package | `AspNetCore.HealthChecks.RabbitMQ` |
+| Version | `9.0.0` |
+| License | Apache-2.0 |
+| Repository | https://github.com/Xabaril/AspNetCore.Diagnostics.HealthChecks |
+| Purpose | RabbitMQ readiness check for Api (`/health/ready`) |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-09 |
+
+### AspNetCore.HealthChecks.UI.Client `9.0.0`
+
+| Field | Value |
+|---|---|
+| Package | `AspNetCore.HealthChecks.UI.Client` |
+| Version | `9.0.0` |
+| License | Apache-2.0 |
+| Repository | https://github.com/Xabaril/AspNetCore.Diagnostics.HealthChecks |
+| Purpose | `UIResponseWriter.WriteHealthCheckUIResponse` for JSON health check output |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-09 |
+
 ### OpenTelemetry.Extensions.Hosting `1.17.0`
 
 | Field | Value |

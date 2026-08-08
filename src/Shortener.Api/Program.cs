@@ -1,9 +1,12 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using QRCoder;
+using RabbitMQ.Client;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
@@ -72,7 +75,26 @@ builder.Host.UseSerilog((ctx, services, cfg) => cfg
     .Enrich.WithProperty("service", "shortener-api")
     .WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter()));
 
-builder.Services.AddHealthChecks();
+var dbConnStr = builder.Configuration.GetSection("Database").Get<DatabaseOptions>()?.ConnectionString ?? string.Empty;
+var redisConnStr = builder.Configuration.GetSection(RedisOptions.SectionName).Get<RedisOptions>()?.ConnectionString ?? string.Empty;
+
+builder.Services.AddHealthChecks()
+    .AddNpgSql(dbConnStr, tags: ["ready"])
+    .AddRedis(redisConnStr, tags: ["ready"])
+    .AddRabbitMQ(async sp =>
+    {
+        var opts = sp.GetRequiredService<IOptions<RabbitMqOptions>>().Value;
+        var factory = new ConnectionFactory
+        {
+            HostName = opts.Host,
+            Port = opts.Port,
+            VirtualHost = opts.VirtualHost,
+            UserName = opts.Username,
+            Password = opts.Password,
+        };
+        return await factory.CreateConnectionAsync();
+    }, tags: ["ready"]);
+
 builder.Services.AddSingleton(TimeProvider.System);
 
 // Options
@@ -252,8 +274,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 
-app.MapHealthChecks("/health/live");
-app.MapHealthChecks("/health/ready");
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse,
+});
 app.MapPrometheusScrapingEndpoint("/metrics");
 
 // ── Public: anonymous link creation ──────────────────────────────────────────
