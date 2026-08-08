@@ -47,6 +47,9 @@ internal sealed class ShortLinkRepository(ShortenerDbContext db) : IShortLinkRep
         return (items.Take(pageSize).ToList(), hasMore);
     }
 
+    public Task<int> CountActiveByTenantAsync(Guid tenantId, CancellationToken ct)
+        => db.ShortLinks.CountAsync(l => l.TenantId == tenantId && l.Status != LinkStatus.Deleted, ct);
+
     public async Task<IReadOnlyList<ShortLink>> ListAboveReportThresholdAsync(int threshold, int batchSize, CancellationToken ct)
         => await db.ShortLinks
             .Where(l => l.ReportCount >= threshold && l.Status == LinkStatus.Active)

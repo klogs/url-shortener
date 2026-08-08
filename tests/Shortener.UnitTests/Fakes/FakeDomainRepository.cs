@@ -18,6 +18,9 @@ internal sealed class FakeDomainRepository : IDomainRepository
     public Task<TenantDomain?> GetByIdAsync(Guid id, Guid tenantId, CancellationToken ct)
         => Task.FromResult(_store.FirstOrDefault(d => d.Id == id && d.TenantId == tenantId));
 
+    public Task<int> CountCustomByTenantAsync(Guid tenantId, CancellationToken ct)
+        => Task.FromResult(_store.Count(d => d.TenantId == tenantId && !d.IsDefault));
+
     public Task<IReadOnlyList<TenantDomain>> ListByTenantAsync(Guid tenantId, CancellationToken ct)
         => Task.FromResult<IReadOnlyList<TenantDomain>>(_store.Where(d => d.TenantId == tenantId).ToList());
 

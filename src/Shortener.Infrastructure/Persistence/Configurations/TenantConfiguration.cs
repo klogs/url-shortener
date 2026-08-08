@@ -14,5 +14,6 @@ internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
         builder.Property(t => t.Name).HasColumnName("name").HasMaxLength(200).IsRequired();
         builder.Property(t => t.CreatedAtUtc).HasColumnName("created_at_utc");
         builder.Property(t => t.IsActive).HasColumnName("is_active");
+        builder.Property(t => t.Plan).HasColumnName("plan").HasConversion<int>().HasDefaultValue(0);
     }
 }

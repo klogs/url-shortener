@@ -45,6 +45,8 @@ using Shortener.Application.Links.Queries.GetTenantStats;
 using Shortener.Application.Variants.Commands.CreateVariant;
 using Shortener.Application.Variants.Commands.DeleteVariant;
 using Shortener.Application.Variants.Queries;
+using Shortener.Api.Endpoints.Billing;
+using Shortener.Application.Billing;
 using Shortener.Application.Webhooks.Commands.CreateWebhook;
 using Shortener.Application.Webhooks.Commands.DeleteWebhook;
 using Shortener.Application.Webhooks.Commands.UpdateWebhook;
@@ -144,6 +146,10 @@ builder.Services.AddScoped<ListGeoRoutesHandler>();
 builder.Services.AddScoped<GetTenantStatsHandler>();
 builder.Services.AddScoped<GetLinkAnalyticsHandler>();
 
+// Billing
+builder.Services.AddScoped<GetTenantUsageHandler>();
+builder.Services.AddScoped<ChangeTenantPlanHandler>();
+
 // GDPR
 builder.Services.AddScoped<DeleteTenantDataHandler>();
 
@@ -189,6 +195,9 @@ builder.Services.AddAuthorization(opts =>
         policy.AddAuthenticationSchemes(ApiKeyAuthenticationOptions.SchemeName)
               .RequireAuthenticatedUser()
               .RequireClaim("scope", "links:write"));
+    opts.AddPolicy("Admin", policy =>
+        policy.RequireAuthenticatedUser()
+              .RequireClaim("role", "admin"));
 });
 
 // Rate limiting
@@ -1002,6 +1011,40 @@ app.MapDelete("/api/v1/gdpr/my-data", async (
     await handler.HandleAsync(new DeleteTenantDataCommand(tenantId.Value), ct);
     return Results.NoContent();
 }).RequireAuthorization();
+
+// ── Billing: tenant usage + plan management ──────────────────────────────────
+
+app.MapGet("/api/v1/tenants/me/usage", async (
+    ClaimsPrincipal user,
+    GetTenantUsageHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    var result = await handler.HandleAsync(new GetTenantUsageQuery(tenantId.Value), ct);
+    return Results.Ok(result);
+}).RequireAuthorization();
+
+app.MapPut("/api/v1/admin/tenants/{id:guid}/plan", async (
+    Guid id,
+    ChangeTenantPlanRequest request,
+    ChangeTenantPlanHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        await handler.HandleAsync(new ChangeTenantPlanCommand(id, request.Plan), ct);
+        return Results.NoContent();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status404NotFound);
+    }
+}).RequireAuthorization("Admin");
 
 // ── Public: abuse report ──────────────────────────────────────────────────────
 

@@ -361,6 +361,11 @@ namespace Shortener.Migrator.Migrations;
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
+                    b.Property<int>("Plan")
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("plan");
+
                     b.HasKey("Id");
 
                     b.ToTable("tenants", (string)null);

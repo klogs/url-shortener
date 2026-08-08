@@ -244,6 +244,27 @@ export async function deleteGeoRoute(
   if (!res.ok) throw new Error(`Failed to delete geo route (${res.status})`);
 }
 
+// ── Authenticated: billing / usage ───────────────────────────────────────────
+
+export interface PlanLimits {
+  maxLinks: number;
+  maxCustomDomains: number;
+  analyticsDays: number;
+}
+
+export interface TenantUsage {
+  linkCount: number;
+  customDomainCount: number;
+  plan: string;
+  limits: PlanLimits;
+}
+
+export async function getTenantUsage(token: string): Promise<TenantUsage> {
+  const res = await apiFetch("/api/v1/tenants/me/usage", token);
+  if (!res.ok) throw new Error(`Failed to load usage (${res.status})`);
+  return res.json() as Promise<TenantUsage>;
+}
+
 // ── Authenticated: analytics ──────────────────────────────────────────────────
 
 export interface DailyPoint {

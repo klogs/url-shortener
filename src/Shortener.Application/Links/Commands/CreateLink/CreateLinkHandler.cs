@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Shortener.Application.Billing;
 using Shortener.Application.Interfaces;
 using Shortener.Application.Options;
 using Shortener.Domain.Entities;
@@ -9,6 +10,7 @@ namespace Shortener.Application.Links.Commands.CreateLink;
 public sealed class CreateLinkHandler(
     IShortLinkRepository links,
     IDomainRepository domains,
+    ITenantRepository tenants,
     IShortCodeGenerator codeGenerator,
     ICaptchaVerifier captchaVerifier,
     IUrlBlocklist urlBlocklist,
@@ -25,6 +27,21 @@ public sealed class CreateLinkHandler(
             if (!verified)
             {
                 throw new InvalidOperationException("CAPTCHA verification failed.");
+            }
+        }
+        else
+        {
+            var tenant = await tenants.GetByIdAsync(cmd.TenantId, ct)
+                ?? throw new InvalidOperationException($"Tenant {cmd.TenantId} not found.");
+            var limits = PlanLimitsProvider.For(tenant.Plan);
+            if (limits.MaxLinks != -1)
+            {
+                var count = await links.CountActiveByTenantAsync(cmd.TenantId, ct);
+                if (count >= limits.MaxLinks)
+                {
+                    throw new InvalidOperationException(
+                        $"Link quota reached for your plan ({tenant.Plan}). Maximum {limits.MaxLinks} links allowed.");
+                }
             }
         }
 

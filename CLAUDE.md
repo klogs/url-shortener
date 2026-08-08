@@ -155,3 +155,4 @@ Random cryptographic Base62 (alphabet `0-9A-Za-z`), 7 characters → ~3.5 trilli
 - **Phase 8**: Security & operations — HTTPS enforcement, HSTS, CSP headers, GDPR data deletion, multi-tenant isolation hardening, secrets management guidance ✅
 - **Phase 9**: Test coverage — Integration tests (Testcontainers), architecture tests (layer dependency rules), k6 load tests for redirect hot-path ✅
 - **Phase 10**: Observability — OpenTelemetry tracing + metrics, Serilog structured logging, Grafana/Prometheus stack in docker-compose, detailed health checks ✅
+- **Phase 11**: Billing & quotas — TenantPlan enum (Free/Pro/Enterprise), PlanLimits value object, quota enforcement in CreateLink + AddDomain, GetTenantUsage handler, `GET /api/v1/tenants/me/usage`, `PUT /api/v1/admin/tenants/{id}/plan`, frontend usage page + dashboard widget ✅

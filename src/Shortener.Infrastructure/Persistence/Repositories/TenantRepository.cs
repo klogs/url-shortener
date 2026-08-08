@@ -14,4 +14,10 @@ internal sealed class TenantRepository(ShortenerDbContext db) : ITenantRepositor
         db.Tenants.Add(tenant);
         await db.SaveChangesAsync(ct);
     }
+
+    public async Task UpdateAsync(Tenant tenant, CancellationToken ct)
+    {
+        db.Tenants.Update(tenant);
+        await db.SaveChangesAsync(ct);
+    }
 }

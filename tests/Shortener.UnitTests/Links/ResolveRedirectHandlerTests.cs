@@ -1,5 +1,6 @@
 using Shortener.Application.Interfaces;
 using Shortener.Application.Links.Queries.ResolveRedirect;
+using Shortener.Application.Observability;
 using Shortener.Domain.Entities;
 using Shortener.Domain.Enums;
 using Shortener.UnitTests.Fakes;
@@ -22,7 +23,7 @@ public sealed class ResolveRedirectHandlerTests
         IGeoResolver? geoResolver = null,
         TimeProvider? time = null)
         => new(links, variants ?? new FakeLinkVariantRepository(), geoRoutes ?? new FakeGeoRouteRepository(),
-            geoResolver ?? new NullGeoResolver(), cache, time ?? TimeProvider.System);
+            geoResolver ?? new NullGeoResolver(), cache, time ?? TimeProvider.System, new ShortenerMetrics());
 
     private static ShortLink ActiveLink(DateTimeOffset? expiresAt = null)
         => ShortLink.CreateAnonymous(TenantId, DomainId, Code, "https://dest.example.com",
