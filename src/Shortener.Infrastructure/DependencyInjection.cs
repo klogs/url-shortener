@@ -5,6 +5,7 @@ using StackExchange.Redis;
 using Shortener.Application.Interfaces;
 using Shortener.Application.Options;
 using Shortener.Infrastructure.Analytics;
+using Shortener.Infrastructure.ApiKeys;
 using Shortener.Infrastructure.Caching;
 using Shortener.Infrastructure.Captcha;
 using Shortener.Infrastructure.Domains;
@@ -32,6 +33,9 @@ public static class DependencyInjection
         services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
         services.AddScoped<IDomainRepository, DomainRepository>();
         services.AddScoped<ITenantRepository, TenantRepository>();
+        services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
+        services.AddScoped<IWebhookRepository, WebhookRepository>();
+        services.AddScoped<IApiKeyAuthenticator, ApiKeyAuthenticator>();
 
         // Redis
         var redisOptions = configuration.GetSection(RedisOptions.SectionName).Get<RedisOptions>()
