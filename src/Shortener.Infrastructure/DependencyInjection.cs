@@ -7,6 +7,7 @@ using Shortener.Application.Options;
 using Shortener.Infrastructure.Analytics;
 using Shortener.Infrastructure.Caching;
 using Shortener.Infrastructure.Captcha;
+using Shortener.Infrastructure.Domains;
 using Shortener.Infrastructure.Persistence;
 using Shortener.Infrastructure.Persistence.Repositories;
 using Shortener.Infrastructure.Seeding;
@@ -43,6 +44,9 @@ public static class DependencyInjection
         // Short code + captcha
         services.AddSingleton<IShortCodeGenerator, Base62ShortCodeGenerator>();
         services.AddSingleton<ICaptchaVerifier, DisabledCaptchaVerifier>();
+
+        // Domain verifier (HTTP challenge)
+        services.AddSingleton<IDomainVerifier, HttpDomainVerifier>();
 
         // Single-tenant seeder (no-op in MultiTenant mode)
         services.AddHostedService<SingleTenantSeeder>();

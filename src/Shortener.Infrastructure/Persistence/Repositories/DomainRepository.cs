@@ -17,9 +17,21 @@ internal sealed class DomainRepository(ShortenerDbContext db) : IDomainRepositor
     public Task<TenantDomain?> GetByIdAsync(Guid id, Guid tenantId, CancellationToken ct)
         => db.Domains.FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId, ct);
 
+    public async Task<IReadOnlyList<TenantDomain>> ListByTenantAsync(Guid tenantId, CancellationToken ct)
+        => await db.Domains
+            .Where(d => d.TenantId == tenantId && d.Status != DomainStatus.Disabled)
+            .OrderBy(d => d.CreatedAtUtc)
+            .ToListAsync(ct);
+
     public async Task InsertAsync(TenantDomain domain, CancellationToken ct)
     {
         db.Domains.Add(domain);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task UpdateAsync(TenantDomain domain, CancellationToken ct)
+    {
+        db.Domains.Update(domain);
         await db.SaveChangesAsync(ct);
     }
 }

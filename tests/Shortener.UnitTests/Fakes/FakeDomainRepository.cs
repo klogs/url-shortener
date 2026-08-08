@@ -5,22 +5,27 @@ namespace Shortener.UnitTests.Fakes;
 
 internal sealed class FakeDomainRepository : IDomainRepository
 {
-    private TenantDomain? _domain;
+    private readonly List<TenantDomain> _store = [];
 
-    public void SetDomain(TenantDomain domain) => _domain = domain;
+    public void Seed(TenantDomain domain) => _store.Add(domain);
 
     public Task<TenantDomain?> GetByNormalizedHostAsync(string normalizedHost, CancellationToken ct)
-        => Task.FromResult(_domain?.NormalizedHost == normalizedHost ? _domain : null);
+        => Task.FromResult(_store.FirstOrDefault(d => d.NormalizedHost == normalizedHost));
 
     public Task<TenantDomain?> GetDefaultForTenantAsync(Guid tenantId, CancellationToken ct)
-        => Task.FromResult(_domain?.TenantId == tenantId ? _domain : null);
+        => Task.FromResult(_store.FirstOrDefault(d => d.TenantId == tenantId && d.IsDefault));
 
     public Task<TenantDomain?> GetByIdAsync(Guid id, Guid tenantId, CancellationToken ct)
-        => Task.FromResult(_domain?.Id == id && _domain?.TenantId == tenantId ? _domain : null);
+        => Task.FromResult(_store.FirstOrDefault(d => d.Id == id && d.TenantId == tenantId));
+
+    public Task<IReadOnlyList<TenantDomain>> ListByTenantAsync(Guid tenantId, CancellationToken ct)
+        => Task.FromResult<IReadOnlyList<TenantDomain>>(_store.Where(d => d.TenantId == tenantId).ToList());
 
     public Task InsertAsync(TenantDomain domain, CancellationToken ct)
     {
-        _domain = domain;
+        _store.Add(domain);
         return Task.CompletedTask;
     }
+
+    public Task UpdateAsync(TenantDomain domain, CancellationToken ct) => Task.CompletedTask;
 }

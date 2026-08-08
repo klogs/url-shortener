@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using Shortener.Application.Interfaces;
 using Shortener.Application.Links.Commands.CreateLink;
 using Shortener.Application.Options;
@@ -35,7 +35,7 @@ public sealed class CreateLinkHandlerTests
     public async Task HandleAsync_AnonymousLink_SetsExpiryAndIsAnonymousTrue()
     {
         var domainRepo = new FakeDomainRepository();
-        domainRepo.SetDomain(DefaultDomain());
+        domainRepo.Seed(DefaultDomain());
         var domain = await domainRepo.GetDefaultForTenantAsync(TenantId, default);
 
         var linkRepo = new FakeShortLinkRepository();
@@ -54,7 +54,7 @@ public sealed class CreateLinkHandlerTests
     public async Task HandleAsync_InvalidUrl_Throws()
     {
         var domainRepo = new FakeDomainRepository();
-        domainRepo.SetDomain(DefaultDomain());
+        domainRepo.Seed(DefaultDomain());
         var domain = await domainRepo.GetDefaultForTenantAsync(TenantId, default);
 
         var handler = CreateHandler(domains: domainRepo);
@@ -68,7 +68,7 @@ public sealed class CreateLinkHandlerTests
     public async Task HandleAsync_FtpUrl_Throws()
     {
         var domainRepo = new FakeDomainRepository();
-        domainRepo.SetDomain(DefaultDomain());
+        domainRepo.Seed(DefaultDomain());
         var domain = await domainRepo.GetDefaultForTenantAsync(TenantId, default);
 
         var handler = CreateHandler(domains: domainRepo);
@@ -82,7 +82,7 @@ public sealed class CreateLinkHandlerTests
     public async Task HandleAsync_AnonymousLink_UsesAnonymousExpirationDays()
     {
         var domainRepo = new FakeDomainRepository();
-        domainRepo.SetDomain(DefaultDomain());
+        domainRepo.Seed(DefaultDomain());
         var domain = await domainRepo.GetDefaultForTenantAsync(TenantId, default);
 
         var opts = new ShortenerOptions { AnonymousExpirationDays = 3 };
@@ -103,7 +103,7 @@ public sealed class CreateLinkHandlerTests
     public async Task HandleAsync_ShortUrl_ContainsDomainHost()
     {
         var domainRepo = new FakeDomainRepository();
-        domainRepo.SetDomain(DefaultDomain());
+        domainRepo.Seed(DefaultDomain());
         var domain = await domainRepo.GetDefaultForTenantAsync(TenantId, default);
 
         var handler = CreateHandler(domains: domainRepo);
