@@ -9,16 +9,14 @@ export default function LinksPage() {
   const { data: session, status } = useSession();
   const [links, setLinks] = useState<LinkSummary[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "loading") return;
-    if (!session?.accessToken) {
-      setLoading(false);
-      return;
-    }
+    if (!session?.accessToken) return;
 
+    setLoading(true);
     listLinks(session.accessToken)
       .then((data) => {
         setLinks(data.items);

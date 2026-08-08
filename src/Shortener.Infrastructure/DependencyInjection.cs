@@ -41,6 +41,7 @@ public static class DependencyInjection
         services.AddScoped<ILinkVariantRepository, LinkVariantRepository>();
         services.AddScoped<IGeoRouteRepository, GeoRouteRepository>();
         services.AddScoped<ILinkStatsRepository, LinkStatsRepository>();
+        services.AddScoped<IClickEventRepository, ClickEventRepository>();
         services.AddScoped<IApiKeyAuthenticator, ApiKeyAuthenticator>();
 
         // URL blocklist (reads from AbuseOptions.BlockedHosts at startup)
@@ -112,7 +113,6 @@ public static class DependencyInjection
         services.Configure<DatabaseOptions>(opts =>
             configuration.GetSection("Database").Bind(opts));
 
-        services.AddScoped<IClickEventRepository, ClickEventRepository>();
         services.AddHostedService<RabbitMqAnalyticsConsumer>();
 
         return services;
