@@ -100,6 +100,20 @@ export async function createPublicLink(
   return res.json() as Promise<CreateLinkResult>;
 }
 
+export interface TenantStats {
+  totalLinks: number;
+  activeLinks: number;
+  clicksToday: number;
+}
+
+// ── Authenticated: stats ─────────────────────────────────────────────────────
+
+export async function getTenantStats(token: string): Promise<TenantStats> {
+  const res = await apiFetch("/api/v1/links/stats", token);
+  if (!res.ok) throw new Error(`Failed to load stats (${res.status})`);
+  return res.json() as Promise<TenantStats>;
+}
+
 // ── Authenticated: links ─────────────────────────────────────────────────────
 
 export async function listLinks(

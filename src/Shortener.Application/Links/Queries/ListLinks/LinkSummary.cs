@@ -8,6 +8,8 @@ public sealed record LinkSummary(
     string Status,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? ExpiresAt,
-    long ClickCountSnapshot);
+    long ClickCountSnapshot,
+    bool IsAbTest,
+    bool HasGeoRoutes);
 
 public sealed record ListLinksResult(IReadOnlyList<LinkSummary> Items, Guid? NextCursor);

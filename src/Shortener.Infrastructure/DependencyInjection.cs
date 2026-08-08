@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<IAbuseReportRepository, AbuseReportRepository>();
         services.AddScoped<ILinkVariantRepository, LinkVariantRepository>();
         services.AddScoped<IGeoRouteRepository, GeoRouteRepository>();
+        services.AddScoped<ILinkStatsRepository, LinkStatsRepository>();
         services.AddScoped<IApiKeyAuthenticator, ApiKeyAuthenticator>();
 
         // URL blocklist (reads from AbuseOptions.BlockedHosts at startup)

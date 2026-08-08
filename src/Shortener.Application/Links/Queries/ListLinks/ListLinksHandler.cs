@@ -11,7 +11,8 @@ public sealed class ListLinksHandler(IShortLinkRepository links)
 
         var summaries = items.Select(l => new LinkSummary(
             l.Id, l.ShortCode, l.DestinationUrl, l.Title,
-            l.Status.ToString(), l.CreatedAtUtc, l.ExpiresAt, l.ClickCountSnapshot))
+            l.Status.ToString(), l.CreatedAtUtc, l.ExpiresAt, l.ClickCountSnapshot,
+            l.IsAbTest, l.HasGeoRoutes))
             .ToList();
 
         var nextCursor = hasMore ? summaries[^1].Id : (Guid?)null;

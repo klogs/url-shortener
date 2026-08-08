@@ -1,6 +1,21 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { getTenantStats, type TenantStats } from "@/lib/api";
 
 export default function DashboardPage() {
+  const { data: session, status } = useSession();
+  const [stats, setStats] = useState<TenantStats | null>(null);
+
+  useEffect(() => {
+    if (status !== "authenticated" || !session?.accessToken) return;
+    getTenantStats(session.accessToken)
+      .then(setStats)
+      .catch(() => null);
+  }, [session, status]);
+
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
@@ -11,9 +26,18 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Total links" value="—" />
-        <StatCard label="Clicks today" value="—" />
-        <StatCard label="Active links" value="—" />
+        <StatCard
+          label="Total links"
+          value={stats ? stats.totalLinks.toLocaleString() : "—"}
+        />
+        <StatCard
+          label="Active links"
+          value={stats ? stats.activeLinks.toLocaleString() : "—"}
+        />
+        <StatCard
+          label="Clicks today"
+          value={stats ? stats.clicksToday.toLocaleString() : "—"}
+        />
       </div>
 
       <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">

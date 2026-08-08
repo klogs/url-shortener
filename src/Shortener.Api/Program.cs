@@ -32,6 +32,7 @@ using Shortener.Application.Options;
 using Shortener.Application.GeoRoutes.Commands.CreateGeoRoute;
 using Shortener.Application.GeoRoutes.Commands.DeleteGeoRoute;
 using Shortener.Application.GeoRoutes.Queries;
+using Shortener.Application.Links.Queries.GetTenantStats;
 using Shortener.Application.Variants.Commands.CreateVariant;
 using Shortener.Application.Variants.Commands.DeleteVariant;
 using Shortener.Application.Variants.Queries;
@@ -89,6 +90,9 @@ builder.Services.AddScoped<ListVariantsHandler>();
 builder.Services.AddScoped<CreateGeoRouteHandler>();
 builder.Services.AddScoped<DeleteGeoRouteHandler>();
 builder.Services.AddScoped<ListGeoRoutesHandler>();
+
+// Stats handler
+builder.Services.AddScoped<GetTenantStatsHandler>();
 
 // Block / unblock / abuse report handlers
 builder.Services.AddScoped<BlockLinkHandler>();
@@ -223,6 +227,23 @@ app.MapPost("/api/v1/public/links", async (
         return Results.Problem(ex.Message, statusCode: StatusCodes.Status422UnprocessableEntity);
     }
 }).RequireRateLimiting("public-create");
+
+// ── Authenticated: tenant stats ───────────────────────────────────────────────
+
+app.MapGet("/api/v1/links/stats", async (
+    ClaimsPrincipal user,
+    GetTenantStatsHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    var result = await handler.HandleAsync(new GetTenantStatsQuery(tenantId.Value), ct);
+    return Results.Ok(result);
+}).RequireAuthorization();
 
 // ── Authenticated: link CRUD ──────────────────────────────────────────────────
 
