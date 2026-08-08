@@ -42,6 +42,7 @@ using Shortener.Application.Webhooks.Commands.DeleteWebhook;
 using Shortener.Application.Webhooks.Commands.UpdateWebhook;
 using Shortener.Application.Webhooks.Queries.ListWebhooks;
 using Shortener.Domain.Entities;
+using Shortener.Api.Middleware;
 using Shortener.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -179,6 +180,8 @@ builder.Services.AddRateLimiter(rateLimiter =>
 
 var app = builder.Build();
 
+app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();

@@ -4,6 +4,7 @@ using Shortener.Application.Options;
 using Shortener.Domain.Entities;
 using Shortener.Domain.Events;
 using Shortener.Infrastructure;
+using Shortener.Redirect.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +23,9 @@ builder.Services.AddAnalyticsPipeline(builder.Configuration);
 builder.Services.AddScoped<ResolveRedirectHandler>();
 
 var app = builder.Build();
+
+app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseHttpsRedirection();
 
 app.MapHealthChecks("/health/live");
 app.MapHealthChecks("/health/ready");
