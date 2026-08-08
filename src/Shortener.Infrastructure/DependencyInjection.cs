@@ -8,6 +8,7 @@ using Shortener.Infrastructure.Caching;
 using Shortener.Infrastructure.Captcha;
 using Shortener.Infrastructure.Persistence;
 using Shortener.Infrastructure.Persistence.Repositories;
+using Shortener.Infrastructure.Seeding;
 using Shortener.Infrastructure.ShortCodes;
 
 namespace Shortener.Infrastructure;
@@ -41,6 +42,9 @@ public static class DependencyInjection
         // Short code + captcha
         services.AddSingleton<IShortCodeGenerator, Base62ShortCodeGenerator>();
         services.AddSingleton<ICaptchaVerifier, DisabledCaptchaVerifier>();
+
+        // Single-tenant seeder (no-op in MultiTenant mode)
+        services.AddHostedService<SingleTenantSeeder>();
 
         return services;
     }
