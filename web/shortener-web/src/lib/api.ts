@@ -293,6 +293,64 @@ export async function getTenantUsage(token: string): Promise<TenantUsage> {
   return res.json() as Promise<TenantUsage>;
 }
 
+// ── Admin ─────────────────────────────────────────────────────────────────────
+
+export interface SystemStats {
+  totalTenants: number;
+  totalLinks: number;
+}
+
+export interface TenantSummary {
+  id: string;
+  name: string;
+  plan: string;
+  isActive: boolean;
+  createdAtUtc: string;
+}
+
+export interface ListTenantsResult {
+  items: TenantSummary[];
+  hasMore: boolean;
+}
+
+export async function getSystemStats(token: string): Promise<SystemStats> {
+  const res = await apiFetch("/api/v1/admin/stats", token);
+  if (!res.ok) throw new Error(`Failed to load system stats (${res.status})`);
+  return res.json() as Promise<SystemStats>;
+}
+
+export async function listAllTenants(
+  token: string,
+  pageSize = 25,
+  after?: string
+): Promise<ListTenantsResult> {
+  const params = new URLSearchParams({ pageSize: String(pageSize) });
+  if (after) {
+    params.set("after", after);
+  }
+  const res = await apiFetch(`/api/v1/admin/tenants?${params}`, token);
+  if (!res.ok) throw new Error(`Failed to load tenants (${res.status})`);
+  return res.json() as Promise<ListTenantsResult>;
+}
+
+export async function getAdminTenantUsage(token: string, tenantId: string): Promise<TenantUsage> {
+  const res = await apiFetch(`/api/v1/admin/tenants/${tenantId}`, token);
+  if (!res.ok) throw new Error(`Failed to load tenant usage (${res.status})`);
+  return res.json() as Promise<TenantUsage>;
+}
+
+export async function changeTenantPlan(
+  token: string,
+  tenantId: string,
+  plan: number
+): Promise<void> {
+  const res = await apiFetch(`/api/v1/admin/tenants/${tenantId}/plan`, token, {
+    method: "PUT",
+    body: JSON.stringify({ plan }),
+  });
+  if (!res.ok) throw new Error(`Failed to change plan (${res.status})`);
+}
+
 // ── Authenticated: analytics ──────────────────────────────────────────────────
 
 export interface DailyPoint {

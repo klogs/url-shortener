@@ -50,6 +50,9 @@ internal sealed class ShortLinkRepository(ShortenerDbContext db) : IShortLinkRep
     public Task<int> CountActiveByTenantAsync(Guid tenantId, CancellationToken ct)
         => db.ShortLinks.CountAsync(l => l.TenantId == tenantId && l.Status != LinkStatus.Deleted, ct);
 
+    public Task<int> CountAllAsync(CancellationToken ct)
+        => db.ShortLinks.CountAsync(l => l.Status != LinkStatus.Deleted, ct);
+
     public async Task<IReadOnlyList<ShortLink>> ListExpiringSoonAsync(
         DateTimeOffset from, DateTimeOffset to, int batchSize, CancellationToken ct)
         => await db.ShortLinks

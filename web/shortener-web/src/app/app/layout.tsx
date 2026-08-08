@@ -16,6 +16,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <NavLink href="/app">Overview</NavLink>
         <NavLink href="/app/links">Links</NavLink>
         <NavLink href="/app/domains">Domains</NavLink>
+        <NavLink href="/app/admin">Admin</NavLink>
         <div className="mt-auto pt-6 space-y-1">
           <NavLink href="/">← Back to home</NavLink>
           <UserMenu />

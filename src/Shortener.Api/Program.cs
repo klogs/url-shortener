@@ -47,6 +47,7 @@ using Shortener.Application.Variants.Commands.DeleteVariant;
 using Shortener.Application.Variants.Queries;
 using Shortener.Api.Endpoints.Billing;
 using Shortener.Application.Billing;
+using Shortener.Application.Admin;
 using Shortener.Application.Webhooks.Commands.CreateWebhook;
 using Shortener.Application.Webhooks.Commands.DeleteWebhook;
 using Shortener.Application.Webhooks.Commands.UpdateWebhook;
@@ -150,6 +151,10 @@ builder.Services.AddScoped<GetLinkAnalyticsHandler>();
 // Billing
 builder.Services.AddScoped<GetTenantUsageHandler>();
 builder.Services.AddScoped<ChangeTenantPlanHandler>();
+
+// Admin
+builder.Services.AddScoped<GetSystemStatsHandler>();
+builder.Services.AddScoped<ListTenantsHandler>();
 
 // Webhook deliveries
 builder.Services.AddScoped<GetWebhookDeliveriesHandler>();
@@ -1060,6 +1065,40 @@ app.MapPut("/api/v1/admin/tenants/{id:guid}/plan", async (
     {
         await handler.HandleAsync(new ChangeTenantPlanCommand(id, request.Plan), ct);
         return Results.NoContent();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status404NotFound);
+    }
+}).RequireAuthorization("Admin");
+
+app.MapGet("/api/v1/admin/stats", async (
+    GetSystemStatsHandler handler,
+    CancellationToken ct) =>
+{
+    var result = await handler.HandleAsync(new GetSystemStatsQuery(), ct);
+    return Results.Ok(result);
+}).RequireAuthorization("Admin");
+
+app.MapGet("/api/v1/admin/tenants", async (
+    ListTenantsHandler handler,
+    int pageSize = 25,
+    Guid? after = null,
+    CancellationToken ct = default) =>
+{
+    var result = await handler.HandleAsync(new ListTenantsQuery(pageSize, after), ct);
+    return Results.Ok(result);
+}).RequireAuthorization("Admin");
+
+app.MapGet("/api/v1/admin/tenants/{id:guid}", async (
+    Guid id,
+    GetTenantUsageHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var result = await handler.HandleAsync(new GetTenantUsageQuery(id), ct);
+        return Results.Ok(result);
     }
     catch (InvalidOperationException ex)
     {
