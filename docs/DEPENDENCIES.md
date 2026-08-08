@@ -108,6 +108,20 @@ Before approving, confirm all of the following:
 | RevenueOrTeamLimit | No |
 | ApprovedAt | 2026-08-08 |
 
+### Microsoft.EntityFrameworkCore.Design `10.0.3`
+
+| Field | Value |
+|---|---|
+| Package | `Microsoft.EntityFrameworkCore.Design` |
+| Version | `10.0.3` |
+| License | MIT |
+| Repository | https://github.com/dotnet/efcore |
+| Purpose | Design-time EF Core tooling for `dotnet ef migrations` |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-08 |
+
 ### StackExchange.Redis `2.8.41`
 
 | Field | Value |
