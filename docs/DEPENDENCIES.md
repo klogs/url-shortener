@@ -220,6 +220,48 @@ Before approving, confirm all of the following:
 | RevenueOrTeamLimit | No |
 | ApprovedAt | 2026-08-08 |
 
+### Testcontainers.PostgreSql `4.4.0`
+
+| Field | Value |
+|---|---|
+| Package | `Testcontainers.PostgreSql` |
+| Version | `4.4.0` |
+| License | MIT |
+| Repository | https://github.com/testcontainers/testcontainers-dotnet |
+| Purpose | Spin up real Postgres containers for integration tests |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-08 |
+
+### Testcontainers.Redis `4.4.0`
+
+| Field | Value |
+|---|---|
+| Package | `Testcontainers.Redis` |
+| Version | `4.4.0` |
+| License | MIT |
+| Repository | https://github.com/testcontainers/testcontainers-dotnet |
+| Purpose | Spin up real Redis containers for integration tests |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-08 |
+
+### Microsoft.AspNetCore.Mvc.Testing `10.0.0`
+
+| Field | Value |
+|---|---|
+| Package | `Microsoft.AspNetCore.Mvc.Testing` |
+| Version | `10.0.0` |
+| License | MIT |
+| Repository | https://github.com/dotnet/aspnetcore |
+| Purpose | WebApplicationFactory for in-process integration testing of ASP.NET Core apps |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-08 |
+
 ---
 
 ## Pending / Under Review

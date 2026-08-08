@@ -41,4 +41,10 @@ internal sealed class FakeShortLinkRepository : IShortLinkRepository
 
     public Task UpdateAsync(ShortLink link, CancellationToken ct)
         => Task.CompletedTask;
+
+    public Task DeleteAllByTenantAsync(Guid tenantId, CancellationToken ct)
+    {
+        _store.RemoveAll(l => l.TenantId == tenantId);
+        return Task.CompletedTask;
+    }
 }
