@@ -31,6 +31,7 @@ public sealed class ShortLink
     public bool IsAnonymous { get; private set; }
 
     public long ClickCountSnapshot { get; private set; }
+    public int ReportCount { get; private set; }
 
     // Optimistic concurrency token
     public uint Version { get; private set; }
@@ -158,5 +159,28 @@ public sealed class ShortLink
         UpdatedAtUtc = now;
     }
 
+    public void Block(Guid updatedBy, DateTimeOffset now)
+    {
+        Status = LinkStatus.Blocked;
+        UpdatedBy = updatedBy;
+        UpdatedAtUtc = now;
+    }
+
+    public void Unblock(Guid updatedBy, DateTimeOffset now)
+    {
+        Status = LinkStatus.Active;
+        UpdatedBy = updatedBy;
+        UpdatedAtUtc = now;
+    }
+
     public void IncrementClickSnapshot() => ClickCountSnapshot++;
+
+    public void IncrementReportCount() => ReportCount++;
+
+    // Called by sweep worker when report count crosses threshold.
+    public void AutoBlock(DateTimeOffset now)
+    {
+        Status = LinkStatus.Blocked;
+        UpdatedAtUtc = now;
+    }
 }

@@ -9,6 +9,7 @@ public interface IShortLinkRepository
     Task<bool> AliasExistsAsync(Guid domainId, string shortCode, CancellationToken ct = default);
     Task<(IReadOnlyList<ShortLink> Items, bool HasMore)> ListAsync(
         Guid tenantId, int pageSize, Guid? afterId, CancellationToken ct = default);
+    Task<IReadOnlyList<ShortLink>> ListAboveReportThresholdAsync(int threshold, int batchSize, CancellationToken ct = default);
     Task InsertAsync(ShortLink link, CancellationToken ct = default);
     Task UpdateAsync(ShortLink link, CancellationToken ct = default);
 }
