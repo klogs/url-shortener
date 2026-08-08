@@ -28,6 +28,11 @@ internal sealed class FakeShortLinkRepository : IShortLinkRepository
         return Task.FromResult(((IReadOnlyList<ShortLink>)items.Take(pageSize).ToList(), hasMore));
     }
 
+    public Task<IReadOnlyList<ShortLink>> ListAboveReportThresholdAsync(int threshold, int batchSize, CancellationToken ct)
+        => Task.FromResult<IReadOnlyList<ShortLink>>(_store
+            .Where(l => l.ReportCount >= threshold)
+            .Take(batchSize).ToList());
+
     public Task InsertAsync(ShortLink link, CancellationToken ct)
     {
         _store.Add(link);

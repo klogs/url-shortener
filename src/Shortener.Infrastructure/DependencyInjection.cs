@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
 using Shortener.Application.Interfaces;
 using Shortener.Application.Options;
+using Shortener.Infrastructure.Abuse;
 using Shortener.Infrastructure.Analytics;
 using Shortener.Infrastructure.ApiKeys;
 using Shortener.Infrastructure.Caching;
@@ -35,7 +36,13 @@ public static class DependencyInjection
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
         services.AddScoped<IWebhookRepository, WebhookRepository>();
+        services.AddScoped<IAbuseReportRepository, AbuseReportRepository>();
         services.AddScoped<IApiKeyAuthenticator, ApiKeyAuthenticator>();
+
+        // URL blocklist (reads from AbuseOptions.BlockedHosts at startup)
+        services.Configure<AbuseOptions>(opts =>
+            configuration.GetSection(AbuseOptions.SectionName).Bind(opts));
+        services.AddSingleton<IUrlBlocklist, ConfigurableUrlBlocklist>();
 
         // Redis
         var redisOptions = configuration.GetSection(RedisOptions.SectionName).Get<RedisOptions>()

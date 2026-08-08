@@ -27,6 +27,7 @@ internal sealed class ShortLinkConfiguration : IEntityTypeConfiguration<ShortLin
         builder.Property(l => l.RedirectType).HasColumnName("redirect_type").HasConversion<int>();
         builder.Property(l => l.IsAnonymous).HasColumnName("is_anonymous");
         builder.Property(l => l.ClickCountSnapshot).HasColumnName("click_count_snapshot");
+        builder.Property(l => l.ReportCount).HasColumnName("report_count");
         builder.Property(l => l.Version).HasColumnName("version").IsRowVersion();
 
         builder.HasIndex(l => new { l.DomainId, l.ShortCode }).IsUnique()

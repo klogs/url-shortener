@@ -11,6 +11,7 @@ public sealed class ShortenerDbContext(DbContextOptions<ShortenerDbContext> opti
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<Webhook> Webhooks => Set<Webhook>();
     public DbSet<WebhookDelivery> WebhookDeliveries => Set<WebhookDelivery>();
+    public DbSet<AbuseReport> AbuseReports => Set<AbuseReport>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -11,6 +11,7 @@ public sealed class CreateLinkHandler(
     IDomainRepository domains,
     IShortCodeGenerator codeGenerator,
     ICaptchaVerifier captchaVerifier,
+    IUrlBlocklist urlBlocklist,
     IOptions<ShortenerOptions> shortenerOptions,
     TimeProvider time)
 {
@@ -28,6 +29,11 @@ public sealed class CreateLinkHandler(
         }
 
         ValidateDestinationUrl(cmd.DestinationUrl);
+
+        if (urlBlocklist.IsBlocked(cmd.DestinationUrl))
+        {
+            throw new InvalidOperationException("This destination URL is not permitted.");
+        }
 
         var domain = await domains.GetByIdAsync(cmd.DomainId, cmd.TenantId, ct)
             ?? throw new InvalidOperationException($"Domain {cmd.DomainId} not found for tenant.");

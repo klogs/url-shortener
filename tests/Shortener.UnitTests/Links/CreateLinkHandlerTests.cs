@@ -21,14 +21,16 @@ public sealed class CreateLinkHandlerTests
         IDomainRepository? domains = null,
         IShortCodeGenerator? codeGenerator = null,
         ICaptchaVerifier? captcha = null,
+        IUrlBlocklist? urlBlocklist = null,
         ShortenerOptions? opts = null)
     {
         var fakeLinks = links ?? new FakeShortLinkRepository();
         var fakeDomains = domains ?? new FakeDomainRepository();
         var fakeCode = codeGenerator ?? new ConstantCodeGenerator("abc1234");
         var fakeCaptcha = captcha ?? new AlwaysPassCaptchaVerifier();
+        var fakeBlocklist = urlBlocklist ?? new NeverBlockUrlBlocklist();
         var options = Options.Create(opts ?? new ShortenerOptions { AnonymousExpirationDays = 7 });
-        return new CreateLinkHandler(fakeLinks, fakeDomains, fakeCode, fakeCaptcha, options, TimeProvider.System);
+        return new CreateLinkHandler(fakeLinks, fakeDomains, fakeCode, fakeCaptcha, fakeBlocklist, options, TimeProvider.System);
     }
 
     [Fact]
