@@ -1,7 +1,11 @@
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Serilog;
 using Serilog.Events;
 using Shortener.Application.Interfaces;
 using Shortener.Application.Links.Queries.ResolveRedirect;
+using Shortener.Application.Observability;
 using Shortener.Application.Options;
 using Shortener.Domain.Entities;
 using Shortener.Domain.Events;
@@ -41,6 +45,36 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAnalyticsPipeline(builder.Configuration);
 builder.Services.AddScoped<ResolveRedirectHandler>();
 
+// OpenTelemetry
+builder.Services.AddSingleton<ShortenerMetrics>();
+
+var otelEndpoint = builder.Configuration["Otel:Endpoint"];
+builder.Services
+    .AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService("shortener-redirect", serviceVersion: "1.0.0"))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation();
+        if (!string.IsNullOrEmpty(otelEndpoint))
+        {
+            tracing.AddOtlpExporter(o => o.Endpoint = new Uri(otelEndpoint));
+        }
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddMeter(ShortenerMetrics.MeterName)
+            .AddPrometheusExporter();
+        if (!string.IsNullOrEmpty(otelEndpoint))
+        {
+            metrics.AddOtlpExporter(o => o.Endpoint = new Uri(otelEndpoint));
+        }
+    });
+
 var app = builder.Build();
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
@@ -56,6 +90,7 @@ app.UseSerilogRequestLogging(opts =>
 
 app.MapHealthChecks("/health/live");
 app.MapHealthChecks("/health/ready");
+app.MapPrometheusScrapingEndpoint("/metrics");
 
 app.MapGet("/{shortCode}", async (
     string shortCode,
@@ -63,12 +98,14 @@ app.MapGet("/{shortCode}", async (
     ResolveRedirectHandler handler,
     IClickEventBuffer analyticsBuffer,
     IRedirectRateLimiter rateLimiter,
+    ShortenerMetrics metrics,
     TimeProvider time,
     CancellationToken ct) =>
 {
     var ip = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
     if (!await rateLimiter.IsAllowedAsync(ip, ct))
     {
+        metrics.RedirectOutcomes.Add(1, new KeyValuePair<string, object?>("outcome", "rate_limited"));
         ctx.Response.Headers.RetryAfter = "60";
         return Results.StatusCode(StatusCodes.Status429TooManyRequests);
     }
@@ -79,6 +116,13 @@ app.MapGet("/{shortCode}", async (
 
     if (resolution.Outcome != RedirectOutcome.Redirect)
     {
+        var label = resolution.Outcome switch
+        {
+            RedirectOutcome.Expired => "expired",
+            RedirectOutcome.Disabled => "disabled",
+            _ => "not_found",
+        };
+        metrics.RedirectOutcomes.Add(1, new KeyValuePair<string, object?>("outcome", label));
         return Results.NotFound();
     }
 
@@ -94,6 +138,7 @@ app.MapGet("/{shortCode}", async (
         Referer: ctx.Request.Headers.Referer.ToString() is { Length: > 0 } ref_ ? ref_ : null,
         Country: null));
 
+    metrics.RedirectOutcomes.Add(1, new KeyValuePair<string, object?>("outcome", "redirect"));
     var url = resolution.DestinationUrl!;
     return resolution.StatusCode switch
     {

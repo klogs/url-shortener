@@ -1,5 +1,8 @@
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Serilog;
 using Serilog.Events;
+using Shortener.Application.Observability;
 using Shortener.Application.Options;
 using Shortener.Infrastructure;
 using Shortener.Worker;
@@ -33,6 +36,21 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 // Analytics consumer: RabbitMQ → ClickEventRepository → PostgreSQL
 builder.Services.AddAnalyticsConsumer(builder.Configuration);
+
+// OpenTelemetry
+builder.Services.AddSingleton<ShortenerMetrics>();
+
+var otelEndpoint = builder.Configuration["Otel:Endpoint"];
+builder.Services
+    .AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService("shortener-worker", serviceVersion: "1.0.0"))
+    .WithTracing(tracing =>
+    {
+        if (!string.IsNullOrEmpty(otelEndpoint))
+        {
+            tracing.AddOtlpExporter(o => o.Endpoint = new Uri(otelEndpoint));
+        }
+    });
 
 // Webhook delivery worker
 builder.Services.AddHostedService<WebhookDeliveryWorker>();

@@ -220,6 +220,76 @@ Before approving, confirm all of the following:
 | RevenueOrTeamLimit | No |
 | ApprovedAt | 2026-08-08 |
 
+### OpenTelemetry.Extensions.Hosting `1.17.0`
+
+| Field | Value |
+|---|---|
+| Package | `OpenTelemetry.Extensions.Hosting` |
+| Version | `1.17.0` |
+| License | Apache-2.0 |
+| Repository | https://github.com/open-telemetry/opentelemetry-dotnet |
+| Purpose | `AddOpenTelemetry()` host integration for all three services |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-09 |
+
+### OpenTelemetry.Instrumentation.AspNetCore `1.17.0`
+
+| Field | Value |
+|---|---|
+| Package | `OpenTelemetry.Instrumentation.AspNetCore` |
+| Version | `1.17.0` |
+| License | Apache-2.0 |
+| Repository | https://github.com/open-telemetry/opentelemetry-dotnet |
+| Purpose | ASP.NET Core HTTP request tracing + metrics for Api and Redirect |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-09 |
+
+### OpenTelemetry.Instrumentation.Http `1.17.0`
+
+| Field | Value |
+|---|---|
+| Package | `OpenTelemetry.Instrumentation.Http` |
+| Version | `1.17.0` |
+| License | Apache-2.0 |
+| Repository | https://github.com/open-telemetry/opentelemetry-dotnet |
+| Purpose | HttpClient tracing + metrics for Api and Redirect |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-09 |
+
+### OpenTelemetry.Exporter.OpenTelemetryProtocol `1.17.0`
+
+| Field | Value |
+|---|---|
+| Package | `OpenTelemetry.Exporter.OpenTelemetryProtocol` |
+| Version | `1.17.0` |
+| License | Apache-2.0 |
+| Repository | https://github.com/open-telemetry/opentelemetry-dotnet |
+| Purpose | OTLP gRPC exporter for traces and metrics (points at OTEL Collector) |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-09 |
+
+### OpenTelemetry.Exporter.Prometheus.AspNetCore `1.17.0-beta.1`
+
+| Field | Value |
+|---|---|
+| Package | `OpenTelemetry.Exporter.Prometheus.AspNetCore` |
+| Version | `1.17.0-beta.1` |
+| License | Apache-2.0 |
+| Repository | https://github.com/open-telemetry/opentelemetry-dotnet |
+| Purpose | `/metrics` Prometheus scrape endpoint on Api and Redirect |
+| CommercialLicenseRequired | No |
+| LicenseKeyRequired | No |
+| RevenueOrTeamLimit | No |
+| ApprovedAt | 2026-08-09 |
+
 ### Serilog.AspNetCore `9.0.0`
 
 | Field | Value |

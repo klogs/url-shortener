@@ -1,10 +1,14 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using QRCoder;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using Shortener.Api.Auth;
+using Shortener.Application.Observability;
 using Shortener.Api.Endpoints.Abuse;
 using Shortener.Api.Endpoints.ApiKeys;
 using Shortener.Api.Endpoints.Domains;
@@ -202,6 +206,36 @@ builder.Services.AddRateLimiter(rateLimiter =>
     };
 });
 
+// OpenTelemetry
+builder.Services.AddSingleton<ShortenerMetrics>();
+
+var otelEndpoint = builder.Configuration["Otel:Endpoint"];
+builder.Services
+    .AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService("shortener-api", serviceVersion: "1.0.0"))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation();
+        if (!string.IsNullOrEmpty(otelEndpoint))
+        {
+            tracing.AddOtlpExporter(o => o.Endpoint = new Uri(otelEndpoint));
+        }
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddMeter(ShortenerMetrics.MeterName)
+            .AddPrometheusExporter();
+        if (!string.IsNullOrEmpty(otelEndpoint))
+        {
+            metrics.AddOtlpExporter(o => o.Endpoint = new Uri(otelEndpoint));
+        }
+    });
+
 var app = builder.Build();
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
@@ -220,6 +254,7 @@ app.UseRateLimiter();
 
 app.MapHealthChecks("/health/live");
 app.MapHealthChecks("/health/ready");
+app.MapPrometheusScrapingEndpoint("/metrics");
 
 // ── Public: anonymous link creation ──────────────────────────────────────────
 

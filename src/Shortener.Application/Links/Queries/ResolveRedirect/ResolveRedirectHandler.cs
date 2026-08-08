@@ -1,4 +1,5 @@
 using Shortener.Application.Interfaces;
+using Shortener.Application.Observability;
 using Shortener.Domain.Enums;
 
 namespace Shortener.Application.Links.Queries.ResolveRedirect;
@@ -9,7 +10,8 @@ public sealed class ResolveRedirectHandler(
     IGeoRouteRepository geoRoutes,
     IGeoResolver geoResolver,
     IRedirectCache cache,
-    TimeProvider time)
+    TimeProvider time,
+    ShortenerMetrics metrics)
 {
     public async Task<RedirectResolution> HandleAsync(ResolveRedirectQuery query, CancellationToken ct = default)
     {
@@ -19,6 +21,9 @@ public sealed class ResolveRedirectHandler(
         var cached = await cache.GetAsync(query.NormalizedHost, query.ShortCode, ct);
         if (cached is not null)
         {
+            var cacheLabel = cached.DestinationUrl == string.Empty ? "negative_hit" : "hit";
+            metrics.CacheOutcomes.Add(1, new KeyValuePair<string, object?>("outcome", cacheLabel));
+
             var resolution = ResolveCached(cached, now);
             if (resolution.Outcome == RedirectOutcome.Redirect)
             {
@@ -38,6 +43,7 @@ public sealed class ResolveRedirectHandler(
         }
 
         // 2. PostgreSQL fallback
+        metrics.CacheOutcomes.Add(1, new KeyValuePair<string, object?>("outcome", "miss"));
         var link = await links.GetByHostAndCodeAsync(query.NormalizedHost, query.ShortCode, ct);
         if (link is null)
         {
