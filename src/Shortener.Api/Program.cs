@@ -3,20 +3,31 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
+using Shortener.Api.Auth;
+using Shortener.Api.Endpoints.ApiKeys;
 using Shortener.Api.Endpoints.Domains;
 using Shortener.Api.Endpoints.Links;
 using Shortener.Api.Endpoints.PublicLinks;
+using Shortener.Api.Endpoints.Webhooks;
+using Shortener.Application.ApiKeys.Commands.CreateApiKey;
+using Shortener.Application.ApiKeys.Commands.RevokeApiKey;
+using Shortener.Application.ApiKeys.Queries.ListApiKeys;
 using Shortener.Application.Domains.Commands.AddDomain;
 using Shortener.Application.Domains.Commands.RemoveDomain;
 using Shortener.Application.Domains.Commands.VerifyDomain;
 using Shortener.Application.Domains.Queries.ListDomains;
 using Shortener.Application.Interfaces;
+using Shortener.Application.Links.Commands.BulkCreateLinks;
 using Shortener.Application.Links.Commands.CreateLink;
 using Shortener.Application.Links.Commands.DeleteLink;
 using Shortener.Application.Links.Commands.UpdateLink;
 using Shortener.Application.Links.Queries.GetLink;
 using Shortener.Application.Links.Queries.ListLinks;
 using Shortener.Application.Options;
+using Shortener.Application.Webhooks.Commands.CreateWebhook;
+using Shortener.Application.Webhooks.Commands.DeleteWebhook;
+using Shortener.Application.Webhooks.Commands.UpdateWebhook;
+using Shortener.Application.Webhooks.Queries.ListWebhooks;
 using Shortener.Domain.Entities;
 using Shortener.Infrastructure;
 
@@ -53,7 +64,21 @@ builder.Services.AddScoped<ListDomainsHandler>();
 builder.Services.AddScoped<VerifyDomainHandler>();
 builder.Services.AddScoped<RemoveDomainHandler>();
 
-// JWT bearer auth
+// API key handlers
+builder.Services.AddScoped<CreateApiKeyHandler>();
+builder.Services.AddScoped<ListApiKeysHandler>();
+builder.Services.AddScoped<RevokeApiKeyHandler>();
+
+// Bulk create handler
+builder.Services.AddScoped<BulkCreateLinksHandler>();
+
+// Webhook handlers
+builder.Services.AddScoped<CreateWebhookHandler>();
+builder.Services.AddScoped<ListWebhooksHandler>();
+builder.Services.AddScoped<UpdateWebhookHandler>();
+builder.Services.AddScoped<DeleteWebhookHandler>();
+
+// Authentication: JWT bearer (primary) + API key (secondary)
 var authOptions = builder.Configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>();
 if (authOptions is not null && !string.IsNullOrWhiteSpace(authOptions.Authority))
 {
@@ -63,15 +88,25 @@ if (authOptions is not null && !string.IsNullOrWhiteSpace(authOptions.Authority)
             opts.Authority = authOptions.Authority;
             opts.Audience = authOptions.ClientId;
             opts.MapInboundClaims = false;
-        });
-    builder.Services.AddAuthorization();
+        })
+        .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
+            ApiKeyAuthenticationOptions.SchemeName, _ => { });
 }
 else
 {
     // Auth not configured — allow anonymous for local dev
-    builder.Services.AddAuthentication();
-    builder.Services.AddAuthorization();
+    builder.Services.AddAuthentication()
+        .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
+            ApiKeyAuthenticationOptions.SchemeName, _ => { });
 }
+
+builder.Services.AddAuthorization(opts =>
+{
+    opts.AddPolicy("ApiKeyLinksWrite", policy =>
+        policy.AddAuthenticationSchemes(ApiKeyAuthenticationOptions.SchemeName)
+              .RequireAuthenticatedUser()
+              .RequireClaim("scope", "links:write"));
+});
 
 // Rate limiting
 builder.Services.AddRateLimiter(rateLimiter =>
@@ -335,6 +370,202 @@ domains.MapDelete("/{id:guid}", async (
     {
         var status = ex.Message.Contains("not found") ? StatusCodes.Status404NotFound : StatusCodes.Status422UnprocessableEntity;
         return Results.Problem(ex.Message, statusCode: status);
+    }
+});
+
+// ── Authenticated: API key management ────────────────────────────────────────
+
+var apiKeys = app.MapGroup("/api/v1/api-keys").RequireAuthorization();
+
+apiKeys.MapGet("/", async (
+    ClaimsPrincipal user,
+    ListApiKeysHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    var result = await handler.HandleAsync(new ListApiKeysQuery(tenantId.Value), ct);
+    return Results.Ok(result);
+});
+
+apiKeys.MapPost("/", async (
+    CreateApiKeyRequest request,
+    ClaimsPrincipal user,
+    CreateApiKeyHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    try
+    {
+        var command = new CreateApiKeyCommand(tenantId.Value, request.Name, request.Scopes, request.ExpiresAt);
+        var result = await handler.HandleAsync(command, ct);
+        return Results.Created($"/api/v1/api-keys/{result.Id}", result);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+    }
+});
+
+apiKeys.MapDelete("/{id:guid}", async (
+    Guid id,
+    ClaimsPrincipal user,
+    RevokeApiKeyHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    try
+    {
+        await handler.HandleAsync(new RevokeApiKeyCommand(id, tenantId.Value), ct);
+        return Results.NoContent();
+    }
+    catch (InvalidOperationException)
+    {
+        return Results.NotFound();
+    }
+});
+
+// ── Bulk create (API key with links:write scope) ──────────────────────────────
+
+app.MapPost("/api/v1/links/bulk", async (
+    BulkCreateRequest request,
+    ClaimsPrincipal user,
+    BulkCreateLinksHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    var userId = ResolveUserId(user);
+    if (tenantId is null || userId is null)
+    {
+        return Results.Forbid();
+    }
+
+    var items = request.Links
+        .Select(l => new BulkLinkItem(l.DestinationUrl, l.Alias, l.ExpiresAt))
+        .ToList();
+
+    try
+    {
+        var command = new BulkCreateLinksCommand(tenantId.Value, request.DomainId, userId.Value, items);
+        var result = await handler.HandleAsync(command, ct);
+        return Results.Ok(result);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status422UnprocessableEntity);
+    }
+}).RequireAuthorization("ApiKeyLinksWrite");
+
+// ── Authenticated: webhook management ────────────────────────────────────────
+
+var webhooks = app.MapGroup("/api/v1/webhooks").RequireAuthorization();
+
+webhooks.MapGet("/", async (
+    ClaimsPrincipal user,
+    ListWebhooksHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    var result = await handler.HandleAsync(new ListWebhooksQuery(tenantId.Value), ct);
+    return Results.Ok(result);
+});
+
+webhooks.MapPost("/", async (
+    CreateWebhookRequest request,
+    ClaimsPrincipal user,
+    CreateWebhookHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    try
+    {
+        var command = new CreateWebhookCommand(tenantId.Value, request.Url, request.Events);
+        var result = await handler.HandleAsync(command, ct);
+        return Results.Created($"/api/v1/webhooks/{result.Id}", result);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+    }
+});
+
+webhooks.MapPut("/{id:guid}", async (
+    Guid id,
+    UpdateWebhookRequest request,
+    ClaimsPrincipal user,
+    UpdateWebhookHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    try
+    {
+        var command = new UpdateWebhookCommand(id, tenantId.Value, request.Url, request.Events, request.IsActive);
+        await handler.HandleAsync(command, ct);
+        return Results.NoContent();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+    }
+    catch (InvalidOperationException)
+    {
+        return Results.NotFound();
+    }
+});
+
+webhooks.MapDelete("/{id:guid}", async (
+    Guid id,
+    ClaimsPrincipal user,
+    DeleteWebhookHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    try
+    {
+        await handler.HandleAsync(new DeleteWebhookCommand(id, tenantId.Value), ct);
+        return Results.NoContent();
+    }
+    catch (InvalidOperationException)
+    {
+        return Results.NotFound();
     }
 });
 
