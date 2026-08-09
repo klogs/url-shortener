@@ -7,14 +7,13 @@ import { getTenantUsage, type TenantUsage } from "@/lib/api";
 export default function UsagePage() {
   const { data: session, status } = useSession();
   const [usage, setUsage] = useState<TenantUsage | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "loading") return;
     if (!session?.accessToken) return;
 
-    setLoading(true);
     getTenantUsage(session.accessToken)
       .then(setUsage)
       .catch((err: unknown) =>

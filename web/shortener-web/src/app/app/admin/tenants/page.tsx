@@ -32,7 +32,9 @@ export default function AdminTenantsPage() {
 
   useEffect(() => {
     if (status === "loading") return;
+
     load(undefined);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status]);
 

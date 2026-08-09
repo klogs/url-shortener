@@ -10,14 +10,13 @@ export default function WebhookDeliveriesPage() {
   const { data: session, status } = useSession();
   const params = useParams<{ id: string }>();
   const [deliveries, setDeliveries] = useState<WebhookDelivery[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "loading") return;
     if (!session?.accessToken || !params.id) return;
 
-    setLoading(true);
     listWebhookDeliveries(session.accessToken, params.id)
       .then(setDeliveries)
       .catch((err: unknown) =>
