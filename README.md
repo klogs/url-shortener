@@ -22,28 +22,37 @@ Yüksek performanslı, multi-tenant, self-hosted, özel domain destekli ve anali
 
 ## Hızlı Başlangıç
 
-Tüm servisleri Docker ile başlatmak için:
+### Docker Compose ile (Önerilen)
 
 ```bash
+git clone https://github.com/klogs/url-shortener.git
+cd url-shortener
 docker compose up
 ```
 
-Bağımlılıkları ayağa kaldırıp backend'i debug modunda çalıştırmak için:
+Tüm servisler ayağa kalkar: API (`:8080`), Redirect (`:8081`), Worker, Frontend (`:3000`), PostgreSQL, Redis, RabbitMQ.
+
+### Debug / Yerel Geliştirme
+
+Gereksinimler: [.NET 10 SDK](https://dotnet.microsoft.com/download), [Node.js 22](https://nodejs.org/)
 
 ```bash
+git clone https://github.com/klogs/url-shortener.git
+cd url-shortener
+
+# Altyapıyı başlat
 docker compose up -d postgres redis rabbitmq
 
+# Migration çalıştır
+dotnet run --project src/Shortener.Migrator
+
+# Her birini ayrı terminalde başlat
 dotnet run --project src/Shortener.Api
 dotnet run --project src/Shortener.Redirect
 dotnet run --project src/Shortener.Worker
-```
 
-Frontend:
-
-```bash
-cd web/shortener-web
-npm install
-npm run dev
+# Frontend
+cd web/shortener-web && npm install && npm run dev
 ```
 
 Detaylı kurulum, konfigürasyon ve özellik dökümanları için [Wiki](../../wiki)'ye bakınız.
