@@ -25,13 +25,14 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Database
-        var dbOptions = configuration.GetSection("Database").Get<DatabaseOptions>()
-            ?? throw new InvalidOperationException("Database configuration is missing.");
-
-        services.AddDbContext<ShortenerDbContext>(opts =>
-            opts.UseNpgsql(dbOptions.ConnectionString,
-                npgsql => npgsql.MigrationsAssembly("Shortener.Migrator")));
+        // Database — read connection string lazily so WebApplicationFactory config overrides take effect
+        services.AddDbContext<ShortenerDbContext>((sp, opts) =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            var connStr = cfg.GetSection("Database").Get<DatabaseOptions>()?.ConnectionString
+                ?? throw new InvalidOperationException("Database configuration is missing.");
+            opts.UseNpgsql(connStr, npgsql => npgsql.MigrationsAssembly("Shortener.Migrator"));
+        });
 
         services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
         services.AddScoped<IDomainRepository, DomainRepository>();
@@ -51,12 +52,14 @@ public static class DependencyInjection
             configuration.GetSection(AbuseOptions.SectionName).Bind(opts));
         services.AddSingleton<IUrlBlocklist, ConfigurableUrlBlocklist>();
 
-        // Redis
-        var redisOptions = configuration.GetSection(RedisOptions.SectionName).Get<RedisOptions>()
-            ?? throw new InvalidOperationException("Redis configuration is missing.");
-
-        services.AddSingleton<IConnectionMultiplexer>(
-            _ => ConnectionMultiplexer.Connect(redisOptions.ConnectionString));
+        // Redis — read connection string lazily so WebApplicationFactory config overrides take effect
+        services.AddSingleton<IConnectionMultiplexer>(sp =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            var connStr = cfg.GetSection(RedisOptions.SectionName).Get<RedisOptions>()?.ConnectionString
+                ?? throw new InvalidOperationException("Redis configuration is missing.");
+            return ConnectionMultiplexer.Connect(connStr);
+        });
         services.AddSingleton<IRedirectCache, RedirectCache>();
         services.Configure<RateLimitOptions>(opts =>
             configuration.GetSection(RateLimitOptions.SectionName).Bind(opts));
