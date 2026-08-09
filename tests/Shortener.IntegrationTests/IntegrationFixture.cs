@@ -2,6 +2,7 @@ using Dapper;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Shortener.Infrastructure.Persistence;
+using Shortener.Migrator.Migrations;
 using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
 
@@ -37,7 +38,7 @@ public sealed class IntegrationFixture : IAsyncLifetime
         // don't exist yet.
         var opts = new DbContextOptionsBuilder<ShortenerDbContext>()
             .UseNpgsql(PostgresConnectionString,
-                npgsql => npgsql.MigrationsAssembly("Shortener.Migrator"))
+                npgsql => npgsql.MigrationsAssembly(typeof(InitialSchema).Assembly.FullName))
             .Options;
         await using var db = new ShortenerDbContext(opts);
         await db.Database.MigrateAsync();

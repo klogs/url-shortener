@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\Shortener.Api\Shortener.Api.csproj" />
     <ProjectReference Include="..\..\src\Shortener.Redirect\Shortener.Redirect.csproj" />
     <ProjectReference Include="..\..\src\Shortener.Infrastructure\Shortener.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Shortener.Migrator\Shortener.Migrator.csproj" />
   </ItemGroup>
 
 </Project>
