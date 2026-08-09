@@ -1,6 +1,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
+COPY Directory.Build.props .
 COPY src/Shortener.Domain/Shortener.Domain.csproj                   src/Shortener.Domain/
 COPY src/Shortener.Application/Shortener.Application.csproj         src/Shortener.Application/
 COPY src/Shortener.Contracts/Shortener.Contracts.csproj             src/Shortener.Contracts/
