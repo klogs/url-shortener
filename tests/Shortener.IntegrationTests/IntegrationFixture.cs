@@ -1,6 +1,5 @@
 using Dapper;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Shortener.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
@@ -33,10 +32,14 @@ public sealed class IntegrationFixture : IAsyncLifetime
         PostgresConnectionString = _postgres.GetConnectionString();
         RedisConnectionString = _redis.GetConnectionString();
 
-        // Run EF Core migrations
-        using var factory = new ApiIntegrationFactory(this);
-        await using var scope = factory.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<ShortenerDbContext>();
+        // Run migrations BEFORE creating any WebApplicationFactory so that
+        // SingleTenantSeeder (a hosted service) does not query tables that
+        // don't exist yet.
+        var opts = new DbContextOptionsBuilder<ShortenerDbContext>()
+            .UseNpgsql(PostgresConnectionString,
+                npgsql => npgsql.MigrationsAssembly("Shortener.Migrator"))
+            .Options;
+        await using var db = new ShortenerDbContext(opts);
         await db.Database.MigrateAsync();
 
         // Seed a test tenant and domain
@@ -49,16 +52,16 @@ public sealed class IntegrationFixture : IAsyncLifetime
 
         await conn.ExecuteAsync(
             """
-            INSERT INTO tenants (id, name, plan, created_at_utc)
-            VALUES (@Id, 'Test Tenant', 'Free', NOW())
+            INSERT INTO tenants (id, name, plan, is_active, created_at_utc)
+            VALUES (@Id, 'Test Tenant', 0, TRUE, NOW())
             ON CONFLICT (id) DO NOTHING
             """,
             new { Id = TestTenantId });
 
         await conn.ExecuteAsync(
             """
-            INSERT INTO tenant_domains (id, tenant_id, host, normalized_host, is_verified, created_at_utc)
-            VALUES (@Id, @TenantId, @Host, @Host, TRUE, NOW())
+            INSERT INTO domains (id, tenant_id, host, normalized_host, status, is_default, created_at_utc)
+            VALUES (@Id, @TenantId, @Host, @Host, 'Active', TRUE, NOW())
             ON CONFLICT (id) DO NOTHING
             """,
             new { Id = TestDomainId, TenantId = TestTenantId, Host = TestHost });
