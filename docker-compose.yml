@@ -36,7 +36,6 @@ services:
   rabbitmq:
     image: rabbitmq:4-management-alpine
     restart: unless-stopped
-    profiles: ["messaging"]
     environment:
       RABBITMQ_DEFAULT_USER: shortener
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-shortener_dev}
@@ -53,56 +52,112 @@ services:
       retries: 10
       start_period: 20s
 
-  # ─── Application Services (uncomment when Dockerfiles are ready in Phase 1) ─
+  # ─── Migration (runs once, then exits) ─────────────────────────────────────
 
-  # shortener-api:
-  #   build:
-  #     context: .
-  #     dockerfile: src/Shortener.Api/Dockerfile
-  #   restart: unless-stopped
-  #   ports:
-  #     - "8080:8080"
-  #   environment:
-  #     - Database__ConnectionString=Host=postgres;Database=shortener;Username=shortener;Password=${POSTGRES_PASSWORD:-shortener_dev}
-  #     - Redis__ConnectionString=redis:6379
-  #     - Auth__Authority=${AUTH__AUTHORITY}
-  #     - Auth__ClientId=${AUTH__CLIENT_ID}
-  #     - Captcha__Provider=Disabled
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
+  shortener-migrator:
+    build:
+      context: .
+      dockerfile: src/Shortener.Migrator/Dockerfile
+    image: klogs/shortener-migrator:latest
+    restart: "no"
+    environment:
+      Database__ConnectionString: "Host=postgres;Port=5432;Database=shortener;Username=shortener;Password=${POSTGRES_PASSWORD:-shortener_dev}"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
-  # shortener-redirect:
-  #   build:
-  #     context: .
-  #     dockerfile: src/Shortener.Redirect/Dockerfile
-  #   restart: unless-stopped
-  #   ports:
-  #     - "8081:8080"
-  #   environment:
-  #     - Database__ConnectionString=Host=postgres;Database=shortener;Username=shortener;Password=${POSTGRES_PASSWORD:-shortener_dev}
-  #     - Redis__ConnectionString=redis:6379
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
+  # ─── Application Services ──────────────────────────────────────────────────
 
-  # shortener-worker:
-  #   build:
-  #     context: .
-  #     dockerfile: src/Shortener.Worker/Dockerfile
-  #   restart: unless-stopped
-  #   environment:
-  #     - Database__ConnectionString=Host=postgres;Database=shortener;Username=shortener;Password=${POSTGRES_PASSWORD:-shortener_dev}
-  #     - Redis__ConnectionString=redis:6379
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
+  shortener-api:
+    build:
+      context: .
+      dockerfile: src/Shortener.Api/Dockerfile
+    image: klogs/shortener-api:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      Database__ConnectionString: "Host=postgres;Port=5432;Database=shortener;Username=shortener;Password=${POSTGRES_PASSWORD:-shortener_dev}"
+      Redis__ConnectionString: "redis:6379"
+      RabbitMq__Host: "rabbitmq"
+      RabbitMq__Username: "shortener"
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-shortener_dev}
+      RabbitMq__VirtualHost: "shortener"
+      Auth__Authority: "${AUTH__AUTHORITY:-https://idp.klogs.io}"
+      Auth__ClientId: "${AUTH__CLIENT_ID:-klogs.web}"
+      Auth__ClientSecret: "${AUTH__CLIENT_SECRET:-}"
+      Captcha__Provider: "${CAPTCHA__PROVIDER:-Disabled}"
+      Captcha__SiteKey: "${CAPTCHA__SITE_KEY:-}"
+      Captcha__SecretKey: "${CAPTCHA__SECRET_KEY:-}"
+      MultiTenancy__Mode: "${MULTITENANCY__MODE:-SingleTenant}"
+      App__DefaultDomain: "${APP__DEFAULT_DOMAIN:-localhost:8081}"
+    depends_on:
+      shortener-migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  shortener-redirect:
+    build:
+      context: .
+      dockerfile: src/Shortener.Redirect/Dockerfile
+    image: klogs/shortener-redirect:latest
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      Database__ConnectionString: "Host=postgres;Port=5432;Database=shortener;Username=shortener;Password=${POSTGRES_PASSWORD:-shortener_dev}"
+      Redis__ConnectionString: "redis:6379"
+      RabbitMq__Host: "rabbitmq"
+      RabbitMq__Username: "shortener"
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-shortener_dev}
+      RabbitMq__VirtualHost: "shortener"
+    depends_on:
+      shortener-migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  shortener-worker:
+    build:
+      context: .
+      dockerfile: src/Shortener.Worker/Dockerfile
+    image: klogs/shortener-worker:latest
+    restart: unless-stopped
+    environment:
+      Database__ConnectionString: "Host=postgres;Port=5432;Database=shortener;Username=shortener;Password=${POSTGRES_PASSWORD:-shortener_dev}"
+      Redis__ConnectionString: "redis:6379"
+      RabbitMq__Host: "rabbitmq"
+      RabbitMq__Username: "shortener"
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-shortener_dev}
+      RabbitMq__VirtualHost: "shortener"
+    depends_on:
+      shortener-migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  shortener-web:
+    build:
+      context: web/shortener-web
+      dockerfile: Dockerfile
+    image: klogs/shortener-web:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:8080"
+      NEXT_PUBLIC_CAPTCHA_SITE_KEY: "${CAPTCHA__SITE_KEY:-}"
+      AUTH_ISSUER: "${AUTH__AUTHORITY:-https://idp.klogs.io}"
+      AUTH_SECRET: "${AUTH__SECRET:-change-me-in-production}"
+    depends_on:
+      - shortener-api
 
   # ─── Observability (docker compose --profile observability up) ──────────────
 

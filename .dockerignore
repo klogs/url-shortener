@@ -1,0 +1,27 @@
+.git
+.github
+.vs
+.vscode
+
+# .NET build outputs
+**/bin/
+**/obj/
+**/TestResults/
+
+# Node
+**/node_modules/
+**/.next/
+
+# Secrets / local config
+.env
+.env.*
+!.env.example
+**/appsettings.Development.json
+
+# Test projects (not needed in runtime image)
+tests/
+
+# Docs / infra tooling / wiki
+docs/
+wiki/
+infra/
