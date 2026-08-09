@@ -8,14 +8,13 @@ import { getSystemStats, type SystemStats } from "@/lib/api";
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const [stats, setStats] = useState<SystemStats | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "loading") return;
     if (!session?.accessToken) return;
 
-    setLoading(true);
     getSystemStats(session.accessToken)
       .then(setStats)
       .catch((err: unknown) =>

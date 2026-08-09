@@ -23,7 +23,7 @@ export default function AdminTenantDetailPage({
   const { id } = use(params);
   const { data: session, status } = useSession();
   const [usage, setUsage] = useState<TenantUsage | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -34,7 +34,6 @@ export default function AdminTenantDetailPage({
     if (status === "loading") return;
     if (!session?.accessToken) return;
 
-    setLoading(true);
     getAdminTenantUsage(session.accessToken, id)
       .then((u) => {
         setUsage(u);
