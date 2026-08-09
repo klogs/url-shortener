@@ -41,6 +41,20 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_CAPTCHA_SITE_KEY: process.env.NEXT_PUBLIC_CAPTCHA_SITE_KEY ?? "",
   },
 
+  // Proxy /api/* to the backend so the browser always calls the same origin.
+  // BACKEND_API_URL is a server-side runtime env var — works in Docker, Codespaces, etc.
+  async rewrites() {
+    const backendUrl =
+      process.env.BACKEND_API_URL ??
+      (apiUrl || "http://localhost:8080");
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
+      },
+    ];
+  },
+
   async headers() {
     return [
       {
