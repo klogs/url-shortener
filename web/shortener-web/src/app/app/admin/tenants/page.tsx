@@ -9,13 +9,13 @@ export default function AdminTenantsPage() {
   const { data: session, status } = useSession();
   const [items, setItems] = useState<TenantSummary[]>([]);
   const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
   const load = (after?: string) => {
     if (!session?.accessToken) return;
-    setLoading(true);
+    // setLoading(true) is NOT called here — callers set it before invoking load
     listAllTenants(session.accessToken, 25, after)
       .then((res) => {
         setItems((prev) => (after ? [...prev, ...res.items] : res.items));
@@ -114,7 +114,7 @@ export default function AdminTenantsPage() {
 
       {hasMore && (
         <button
-          onClick={() => load(cursor)}
+          onClick={() => { setLoading(true); load(cursor); }}
           disabled={loading}
           className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 disabled:opacity-50 transition-colors"
         >
