@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Shortener.Domain.Entities;
+using Shortener.Domain.Enums;
 
 namespace Shortener.Infrastructure.Persistence.Configurations;
 
@@ -14,6 +15,6 @@ internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
         builder.Property(t => t.Name).HasColumnName("name").HasMaxLength(200).IsRequired();
         builder.Property(t => t.CreatedAtUtc).HasColumnName("created_at_utc");
         builder.Property(t => t.IsActive).HasColumnName("is_active");
-        builder.Property(t => t.Plan).HasColumnName("plan").HasConversion<int>().HasDefaultValue(0);
+        builder.Property(t => t.Plan).HasColumnName("plan").HasConversion<int>().HasDefaultValue(TenantPlan.Free);
     }
 }
