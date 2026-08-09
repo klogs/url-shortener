@@ -98,11 +98,11 @@ public sealed class RedirectHotPathTests(IntegrationFixture fixture) : IAsyncLif
             """
             INSERT INTO short_links
                 (id, tenant_id, domain_id, short_code, destination_url, status,
-                 redirect_type, click_count_snapshot, is_ab_test, has_geo_routes,
-                 report_count, created_at_utc, updated_at_utc, expires_at)
+                 redirect_type, is_anonymous, click_count_snapshot, is_ab_test,
+                 has_geo_routes, report_count, created_at_utc, updated_at_utc, expires_at)
             VALUES
                 (@Id, @TenantId, @DomainId, @ShortCode, @DestinationUrl, 'Active',
-                 302, 0, FALSE, FALSE, 0, NOW(), NOW(), @ExpiresAt)
+                 302, FALSE, 0, FALSE, FALSE, 0, NOW(), NOW(), @ExpiresAt)
             """,
             new
             {
