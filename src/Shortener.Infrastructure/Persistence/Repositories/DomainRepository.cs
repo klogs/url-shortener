@@ -17,8 +17,8 @@ internal sealed class DomainRepository(ShortenerDbContext db) : IDomainRepositor
     public Task<TenantDomain?> GetByIdAsync(Guid id, Guid tenantId, CancellationToken ct)
         => db.Domains.FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId, ct);
 
-    public Task<TenantDomain?> GetByIdAsync(Guid id, CancellationToken ct)
-        => db.Domains.FirstOrDefaultAsync(d => d.Id == id && d.Status == DomainStatus.Active, ct);
+    public Task<TenantDomain?> GetActiveByIdAsync(Guid id, Guid tenantId, CancellationToken ct)
+        => db.Domains.FirstOrDefaultAsync(d => d.Id == id && d.Status == DomainStatus.Active && d.TenantId == tenantId, ct);
 
     public Task<int> CountCustomByTenantAsync(Guid tenantId, CancellationToken ct)
         => db.Domains.CountAsync(d => d.TenantId == tenantId && !d.IsDefault && d.Status != DomainStatus.Disabled, ct);

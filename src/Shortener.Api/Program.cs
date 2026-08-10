@@ -210,7 +210,7 @@ builder.Services.AddAuthorization(opts =>
 
     opts.AddPolicy("Admin", policy =>
         policy.RequireAuthenticatedUser());
-              //.RequireClaim("role", "admin"));
+    //.RequireClaim("role", "admin"));
 });
 
 // Rate limiting
@@ -319,27 +319,30 @@ app.MapPost("/api/v1/public/links", async (
 {
     TenantDomain? domain = null;
 
-    // 1. Explicit domainId in request body
-    if (request.DomainId.HasValue)
-    {
-        domain = await domainRepository.GetByIdAsync(request.DomainId.Value, ct);
-    }
-
-    // 2. Authenticated caller (API key or JWT) → use tenant's default domain
-    if (domain is null)
-    {
-        var tenantId = ResolveTenantId(user);
-        if (tenantId is not null)
-        {
-            domain = await domainRepository.GetDefaultForTenantAsync(tenantId.Value, ct);
-        }
-    }
-
-    // 3. Fall back to request host
-    if (domain is null)
+    if (ctx.User?.Identity?.IsAuthenticated == false)
     {
         var normalizedHost = TenantDomain.NormalizeHost(ctx.Request.Host.Value ?? string.Empty);
+
         domain = await domainRepository.GetByNormalizedHostAsync(normalizedHost, ct);
+    }
+    else
+    {
+        var tenantId = ResolveTenantId(user);
+
+        // 1. Explicit domainId in request body
+        if (request.DomainId.HasValue)
+        {
+            domain = await domainRepository.GetActiveByIdAsync(request.DomainId.Value, tenantId ?? Guid.NewGuid(), ct);
+        }
+
+        // 2. Authenticated caller (API key or JWT) → use tenant's default domain
+        if (domain is null)
+        {
+            if (tenantId is not null)
+            {
+                domain = await domainRepository.GetDefaultForTenantAsync(tenantId.Value, ct);
+            }
+        }
     }
 
     if (domain is null)
