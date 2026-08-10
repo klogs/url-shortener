@@ -83,7 +83,7 @@ services:
       RabbitMq__Username: "shortener"
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-shortener_dev}
       RabbitMq__VirtualHost: "shortener"
-      Auth__Authority: "${AUTH__AUTHORITY:-https://idp.klogs.io}"
+      Auth__Authority: "${AUTH__ISSUER:-https://idp.klogs.io}"
       Auth__ClientId: "${AUTH__CLIENT_ID:-klogs.web}"
       Auth__ClientSecret: "${AUTH__CLIENT_SECRET:-}"
       Captcha__Provider: "${CAPTCHA__PROVIDER:-Disabled}"
@@ -156,7 +156,7 @@ services:
       BACKEND_API_URL: "http://shortener-api:8080"
       NEXT_PUBLIC_CAPTCHA_SITE_KEY: "${CAPTCHA__SITE_KEY:-}"
       # OIDC
-      AUTH_ISSUER: "${AUTH__AUTHORITY:-https://idp.klogs.io}"
+      AUTH_ISSUER: "${AUTH__ISSUER:-https://idp.klogs.io}"
       AUTH_CLIENT_ID: "${AUTH__CLIENT_ID:-klogs.web}"
       AUTH_CLIENT_SECRET: "${AUTH__CLIENT_SECRET:-}"
       AUTH_SECRET: "${AUTH__SECRET:-change-me-in-production}"

@@ -122,7 +122,7 @@ Every new NuGet dependency must be logged in `docs/DEPENDENCIES.md` with license
 5. Every tenant-owned entity carries `TenantId`; never trust client-supplied `TenantId` — resolve from token/session.
 6. Uniqueness key is `(DomainId, ShortCode)` — same code can exist on different domains.
 7. Never `UPDATE ShortLinks SET ClickCount = ClickCount + 1` on redirect — use async aggregation.
-8. Authentication provider must be configurable via env vars (`AUTH__AUTHORITY`, `AUTH__CLIENT_ID`, etc.).
+8. Authentication provider must be configurable via env vars (`AUTH__ISSUER`, `AUTH__CLIENT_ID`, etc.).
 9. All timestamps UTC; use `TimeProvider` abstraction for testability.
 10. Nullable reference types enabled, warnings-as-errors.
 

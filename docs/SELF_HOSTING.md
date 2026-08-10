@@ -125,7 +125,7 @@ Uncomment the application service blocks in `docker-compose.yml` and set require
 ```env
 POSTGRES_PASSWORD=changeme
 RABBITMQ_PASSWORD=changeme
-AUTH__AUTHORITY=https://your-idp.example.com
+AUTH__ISSUER=https://your-idp.example.com
 AUTH__CLIENT_ID=your-client-id
 ```
 

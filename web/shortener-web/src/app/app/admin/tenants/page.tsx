@@ -125,18 +125,26 @@ export default function AdminTenantsPage() {
   );
 }
 
-function PlanBadge({ plan }: { plan: string }) {
-  const key = plan.charAt(0).toUpperCase() + plan.slice(1).toLowerCase();
+function PlanBadge({ plan }: { plan: number }) {
+  const kv: Record<number, string> = {
+    0: "Free",
+    1: "Pro",
+    2: "Enterprise",
+  };
+
+  const planName = kv[plan] ?? "Free";
+
   const styles: Record<string, string> = {
     Free: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
     Pro: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
     Enterprise: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400",
   };
+
   return (
     <span
-      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles[key] ?? styles.Free}`}
+      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles[planName] ?? styles.Free}`}
     >
-      {key}
+      {planName}
     </span>
   );
 }
