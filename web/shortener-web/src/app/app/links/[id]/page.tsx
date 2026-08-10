@@ -21,7 +21,7 @@ import {
   type LinkAnalytics,
 } from "@/lib/api";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
+const BASE = process.env.BACKEND_API_URL ?? "";
 
 interface PageParams {
   id: string;

@@ -86,7 +86,10 @@ builder.Services
 var app = builder.Build();
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseSerilogRequestLogging(opts =>
 {
     opts.MessageTemplate = "REDIRECT {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";

@@ -17,7 +17,7 @@ internal sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<S
         var connectionString =
             config.GetConnectionString("Database")
             ?? config["Database:ConnectionString"]
-            ?? "Host=localhost;Database=shortener;Username=shortener;Password=shortener";
+            ?? "Server=172.16.100.209;Port=5432;Database=shortener;User Id=postgres;Password=Zt9kkPadiEnfVgZDxYxy3g;Pooling=true";
 
         var opts = new DbContextOptionsBuilder<ShortenerDbContext>()
             .UseNpgsql(connectionString,

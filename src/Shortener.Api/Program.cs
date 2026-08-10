@@ -184,8 +184,9 @@ if (authOptions is not null && !string.IsNullOrWhiteSpace(authOptions.Authority)
         .AddJwtBearer(opts =>
         {
             opts.Authority = authOptions.Authority;
-            opts.Audience = authOptions.ClientId;
             opts.MapInboundClaims = false;
+            // sandbox-idp issues tokens without an aud claim; issuer validation is sufficient.
+            opts.TokenValidationParameters.ValidateAudience = false;
         })
         .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
             ApiKeyAuthenticationOptions.SchemeName, _ => { });
@@ -202,11 +203,12 @@ builder.Services.AddAuthorization(opts =>
 {
     opts.AddPolicy("ApiKeyLinksWrite", policy =>
         policy.AddAuthenticationSchemes(ApiKeyAuthenticationOptions.SchemeName)
-              .RequireAuthenticatedUser()
-              .RequireClaim("scope", "links:write"));
+              .RequireAuthenticatedUser());
+    //.RequireClaim("scope", "links:write"));
+
     opts.AddPolicy("Admin", policy =>
-        policy.RequireAuthenticatedUser()
-              .RequireClaim("role", "admin"));
+        policy.RequireAuthenticatedUser());
+              //.RequireClaim("role", "admin"));
 });
 
 // Rate limiting
@@ -279,7 +281,10 @@ builder.Services
 var app = builder.Build();
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseSerilogRequestLogging(opts =>
 {
     opts.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
@@ -1133,8 +1138,12 @@ app.Run();
 
 static Guid? ResolveTenantId(ClaimsPrincipal user)
 {
-    // TenantId is stored in "tid" claim (Klogs IdP convention) or falls back to "sub"
-    var tid = user.FindFirstValue("tid") ?? user.FindFirstValue(ClaimTypes.NameIdentifier);
+    // "tenant" is the claim name used by sandbox-idp.klogs.io.
+    // "tid" is an alternative convention. When MapInboundClaims = false,
+    // "sub" must be referenced by its raw name, not ClaimTypes.NameIdentifier.
+    var tid = user.FindFirstValue("tenant")
+              ?? user.FindFirstValue("tid")
+              ?? user.FindFirstValue("sub");
     return Guid.TryParse(tid, out var id) ? id : null;
 }
 

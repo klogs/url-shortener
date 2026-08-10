@@ -43,9 +43,10 @@ internal sealed class ClickEventRepository(IOptions<DatabaseOptions> dbOpts) : I
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.ExecuteAsync(new CommandDefinition(
             """
-            UPDATE click_events
+            UPDATE click_events ce
             SET remote_ip = NULL, user_agent = NULL, referer = NULL
-            WHERE tenant_id = @TenantId
+            FROM short_links sl
+            WHERE ce.link_id = sl.id AND sl.tenant_id = @TenantId
             """,
             new { TenantId = tenantId },
             cancellationToken: ct));
@@ -57,13 +58,14 @@ internal sealed class ClickEventRepository(IOptions<DatabaseOptions> dbOpts) : I
         await using var conn = new NpgsqlConnection(_connectionString);
         var rows = await conn.QueryAsync<(DateOnly Date, long Count)>(new CommandDefinition(
             """
-            SELECT DATE(occurred_at_utc) AS date, COUNT(*) AS count
-            FROM click_events
-            WHERE link_id = @LinkId
-              AND tenant_id = @TenantId
-              AND occurred_at_utc >= @From
-              AND occurred_at_utc < @To
-            GROUP BY DATE(occurred_at_utc)
+            SELECT DATE(ce.occurred_at_utc) AS date, COUNT(*) AS count
+            FROM click_events ce
+            JOIN short_links sl ON ce.link_id = sl.id
+            WHERE ce.link_id = @LinkId
+              AND sl.tenant_id = @TenantId
+              AND ce.occurred_at_utc >= @From
+              AND ce.occurred_at_utc < @To
+            GROUP BY DATE(ce.occurred_at_utc)
             ORDER BY date
             """,
             new { LinkId = linkId, TenantId = tenantId, From = from, To = to },

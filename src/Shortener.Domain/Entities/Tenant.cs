@@ -25,6 +25,19 @@ public sealed class Tenant
         };
     }
 
+    public static Tenant CreateWithId(Guid id, string name, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return new Tenant
+        {
+            Id = id,
+            Name = name.Trim(),
+            CreatedAtUtc = now,
+            IsActive = true,
+            Plan = TenantPlan.Free,
+        };
+    }
+
     public void Deactivate() => IsActive = false;
 
     public void ChangePlan(TenantPlan plan) => Plan = plan;

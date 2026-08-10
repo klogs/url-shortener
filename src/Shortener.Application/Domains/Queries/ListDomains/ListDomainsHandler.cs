@@ -13,6 +13,7 @@ public sealed class ListDomainsHandler(IDomainRepository domains)
             d.NormalizedHost,
             d.Status.ToString(),
             d.IsDefault,
+            d.Status == Domain.Enums.DomainStatus.Active || d.Status == Domain.Enums.DomainStatus.Verified,
             d.VerificationToken,
             d.VerifiedAt,
             d.CreatedAtUtc)).ToList();

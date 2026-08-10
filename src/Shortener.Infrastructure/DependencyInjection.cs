@@ -34,6 +34,15 @@ public static class DependencyInjection
             opts.UseNpgsql(connStr, npgsql => npgsql.MigrationsAssembly("Shortener.Migrator"));
         });
 
+        // Factory for repositories that run concurrent queries (e.g. Task.WhenAll)
+        services.AddDbContextFactory<ShortenerDbContext>((sp, opts) =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            var connStr = cfg.GetSection("Database").Get<DatabaseOptions>()?.ConnectionString
+                ?? throw new InvalidOperationException("Database configuration is missing.");
+            opts.UseNpgsql(connStr, npgsql => npgsql.MigrationsAssembly("Shortener.Migrator"));
+        }, ServiceLifetime.Scoped);
+
         services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
         services.AddScoped<IDomainRepository, DomainRepository>();
         services.AddScoped<ITenantRepository, TenantRepository>();

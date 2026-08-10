@@ -6,6 +6,7 @@ public sealed record DomainDto(
     string NormalizedHost,
     string Status,
     bool IsDefault,
+    bool IsVerified,
     string? VerificationToken,
     DateTimeOffset? VerifiedAt,
     DateTimeOffset CreatedAtUtc);

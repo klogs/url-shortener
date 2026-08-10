@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { listDomains, type DomainSummary } from "@/lib/api";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
+const BASE = process.env.BACKEND_API_URL ?? "";
 
 export default function DomainsPage() {
   const { data: session, status } = useSession();
