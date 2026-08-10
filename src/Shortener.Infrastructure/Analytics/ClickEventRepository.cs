@@ -14,6 +14,9 @@ internal sealed class ClickEventRepository(IOptions<DatabaseOptions> dbOpts) : I
     public async Task InsertAsync(ClickEvent evt, CancellationToken ct)
     {
         await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+
         await conn.ExecuteAsync(new CommandDefinition(
             """
             INSERT INTO click_events
@@ -35,7 +38,16 @@ internal sealed class ClickEventRepository(IOptions<DatabaseOptions> dbOpts) : I
                 evt.Referer,
                 evt.Country,
             },
+            transaction: tx,
             cancellationToken: ct));
+
+        await conn.ExecuteAsync(new CommandDefinition(
+            "UPDATE short_links SET click_count_snapshot = click_count_snapshot + 1 WHERE id = @LinkId",
+            new { evt.LinkId },
+            transaction: tx,
+            cancellationToken: ct));
+
+        await tx.CommitAsync(ct);
     }
 
     public async Task<IReadOnlyList<CountryCount>> GetCountryBreakdownAsync(

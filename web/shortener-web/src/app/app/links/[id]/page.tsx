@@ -491,10 +491,15 @@ export default function LinkDetailPage({ params }: { params: Promise<PageParams>
         </h2>
 
         {geoRoutes.length > 0 && (
-          <table className="w-full text-xs">
+          <table className="w-full text-xs table-fixed">
+            <colgroup>
+              <col className="w-14" />
+              <col />
+              <col className="w-16" />
+            </colgroup>
             <thead>
               <tr className="text-left text-zinc-500">
-                <th className="pb-2 font-medium">Country</th>
+                <th className="pb-2 font-medium">CC</th>
                 <th className="pb-2 font-medium">URL</th>
                 <th className="pb-2" />
               </tr>
@@ -503,7 +508,7 @@ export default function LinkDetailPage({ params }: { params: Promise<PageParams>
               {geoRoutes.map((r) => (
                 <tr key={r.id}>
                   <td className="py-2 font-mono font-medium">{r.countryCode}</td>
-                  <td className="py-2 max-w-xs truncate text-zinc-500">{r.destinationUrl}</td>
+                  <td className="py-2 truncate text-zinc-500">{r.destinationUrl}</td>
                   <td className="py-2 text-right">
                     <button
                       onClick={() => handleDeleteGeoRoute(r.id)}
@@ -526,13 +531,17 @@ export default function LinkDetailPage({ params }: { params: Promise<PageParams>
               maxLength={2}
               value={newGeoCode}
               onChange={(e) => setNewGeoCode(e.target.value.toUpperCase())}
-              className={`${inputCls} w-16 uppercase font-mono`}
+              className="w-12 shrink-0 rounded-lg border border-zinc-200 dark:border-zinc-700
+                bg-white dark:bg-zinc-900 px-2 py-1.5 text-sm uppercase font-mono text-center
+                focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-500"
             />
             <input
-              placeholder="Destination URL"
+              placeholder="https://example.com/destination"
               value={newGeoUrl}
               onChange={(e) => setNewGeoUrl(e.target.value)}
-              className={`${inputCls} flex-1`}
+              className="flex-1 min-w-0 rounded-lg border border-zinc-200 dark:border-zinc-700
+                bg-white dark:bg-zinc-900 px-3 py-1.5 text-sm
+                focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-500"
             />
             <button
               onClick={handleAddGeoRoute}
