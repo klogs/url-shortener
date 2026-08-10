@@ -15,6 +15,7 @@ using Shortener.Infrastructure.Persistence;
 using Shortener.Infrastructure.Persistence.Repositories;
 using Shortener.Infrastructure.Seeding;
 using Shortener.Infrastructure.ShortCodes;
+using Shortener.Infrastructure.Http;
 using Shortener.Infrastructure.Webhooks;
 
 namespace Shortener.Infrastructure;
@@ -128,6 +129,17 @@ public static class DependencyInjection
             configuration.GetSection(RabbitMqOptions.SectionName).Bind(opts));
         services.Configure<DatabaseOptions>(opts =>
             configuration.GetSection("Database").Bind(opts));
+
+        services.AddHttpContextAccessor();
+        services.AddTransient<ForwardAuthorizationHandler>();
+
+        var geoIpBaseUrl = configuration["GeoIp:BaseUrl"] ?? "https://sandbox-geoip.klogs.io";
+        services.AddHttpClient("geoip", c =>
+        {
+            c.BaseAddress = new Uri(geoIpBaseUrl);
+            c.Timeout = TimeSpan.FromSeconds(3);
+        })
+        .AddHttpMessageHandler<ForwardAuthorizationHandler>();
 
         services.AddHostedService<RabbitMqAnalyticsConsumer>();
 

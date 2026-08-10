@@ -51,6 +51,9 @@ public sealed class TenantDomain
         VerifiedAt = now;
     }
 
+    public void SetAsDefault() => IsDefault = true;
+    public void UnsetDefault() => IsDefault = false;
+
     public void Disable() => Status = DomainStatus.Disabled;
 
     public static string NormalizeHost(string host)

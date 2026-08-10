@@ -17,6 +17,9 @@ internal sealed class DomainRepository(ShortenerDbContext db) : IDomainRepositor
     public Task<TenantDomain?> GetByIdAsync(Guid id, Guid tenantId, CancellationToken ct)
         => db.Domains.FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId, ct);
 
+    public Task<TenantDomain?> GetByIdAsync(Guid id, CancellationToken ct)
+        => db.Domains.FirstOrDefaultAsync(d => d.Id == id && d.Status == DomainStatus.Active, ct);
+
     public Task<int> CountCustomByTenantAsync(Guid tenantId, CancellationToken ct)
         => db.Domains.CountAsync(d => d.TenantId == tenantId && !d.IsDefault && d.Status != DomainStatus.Disabled, ct);
 
@@ -35,6 +38,21 @@ internal sealed class DomainRepository(ShortenerDbContext db) : IDomainRepositor
     public async Task UpdateAsync(TenantDomain domain, CancellationToken ct)
     {
         db.Domains.Update(domain);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task SetDefaultAsync(Guid domainId, Guid tenantId, CancellationToken ct)
+    {
+        var target = await db.Domains.FirstOrDefaultAsync(
+            d => d.Id == domainId && d.TenantId == tenantId, ct)
+            ?? throw new InvalidOperationException("Domain not found.");
+
+        // Clear existing default in a single UPDATE, then set the new one
+        await db.Domains
+            .Where(d => d.TenantId == tenantId && d.IsDefault)
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.IsDefault, false), ct);
+
+        target.SetAsDefault();
         await db.SaveChangesAsync(ct);
     }
 }

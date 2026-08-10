@@ -24,6 +24,7 @@ using Shortener.Application.ApiKeys.Commands.RevokeApiKey;
 using Shortener.Application.ApiKeys.Queries.ListApiKeys;
 using Shortener.Application.Domains.Commands.AddDomain;
 using Shortener.Application.Domains.Commands.RemoveDomain;
+using Shortener.Application.Domains.Commands.SetDefaultDomain;
 using Shortener.Application.Domains.Commands.VerifyDomain;
 using Shortener.Application.Domains.Queries.ListDomains;
 using Shortener.Application.Interfaces;
@@ -128,6 +129,7 @@ builder.Services.AddScoped<AddDomainHandler>();
 builder.Services.AddScoped<ListDomainsHandler>();
 builder.Services.AddScoped<VerifyDomainHandler>();
 builder.Services.AddScoped<RemoveDomainHandler>();
+builder.Services.AddScoped<SetDefaultDomainHandler>();
 
 // API key handlers
 builder.Services.AddScoped<CreateApiKeyHandler>();
@@ -310,12 +312,35 @@ app.MapPrometheusScrapingEndpoint("/metrics");
 app.MapPost("/api/v1/public/links", async (
     CreatePublicLinkRequest request,
     HttpContext ctx,
+    ClaimsPrincipal user,
     CreateLinkHandler handler,
     IDomainRepository domainRepository,
     CancellationToken ct) =>
 {
-    var normalizedHost = TenantDomain.NormalizeHost(ctx.Request.Host.Value ?? string.Empty);
-    var domain = await domainRepository.GetByNormalizedHostAsync(normalizedHost, ct);
+    TenantDomain? domain = null;
+
+    // 1. Explicit domainId in request body
+    if (request.DomainId.HasValue)
+    {
+        domain = await domainRepository.GetByIdAsync(request.DomainId.Value, ct);
+    }
+
+    // 2. Authenticated caller (API key or JWT) → use tenant's default domain
+    if (domain is null)
+    {
+        var tenantId = ResolveTenantId(user);
+        if (tenantId is not null)
+        {
+            domain = await domainRepository.GetDefaultForTenantAsync(tenantId.Value, ct);
+        }
+    }
+
+    // 3. Fall back to request host
+    if (domain is null)
+    {
+        var normalizedHost = TenantDomain.NormalizeHost(ctx.Request.Host.Value ?? string.Empty);
+        domain = await domainRepository.GetByNormalizedHostAsync(normalizedHost, ct);
+    }
 
     if (domain is null)
     {
@@ -527,6 +552,29 @@ domains.MapPost("/{id:guid}/verify", async (
     {
         var status = ex.Message.Contains("not found") ? StatusCodes.Status404NotFound : StatusCodes.Status422UnprocessableEntity;
         return Results.Problem(ex.Message, statusCode: status);
+    }
+});
+
+domains.MapPost("/{id:guid}/set-default", async (
+    Guid id,
+    ClaimsPrincipal user,
+    SetDefaultDomainHandler handler,
+    CancellationToken ct) =>
+{
+    var tenantId = ResolveTenantId(user);
+    if (tenantId is null)
+    {
+        return Results.Forbid();
+    }
+
+    try
+    {
+        await handler.HandleAsync(new SetDefaultDomainCommand(id, tenantId.Value), ct);
+        return Results.NoContent();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status404NotFound);
     }
 });
 

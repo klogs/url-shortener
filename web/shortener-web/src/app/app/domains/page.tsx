@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { listDomains, type DomainSummary } from "@/lib/api";
+import { listDomains, setDefaultDomain, type DomainSummary } from "@/lib/api";
 
 const BASE = process.env.BACKEND_API_URL ?? "";
 
@@ -24,6 +24,9 @@ export default function DomainsPage() {
   // Remove state per domain
   const [removing, setRemoving] = useState<Record<string, boolean>>({});
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+
+  // Set-default state
+  const [settingDefault, setSettingDefault] = useState<Record<string, boolean>>({});
 
   const token = session?.accessToken;
 
@@ -84,6 +87,21 @@ export default function DomainsPage() {
       setVerifyResult((v) => ({ ...v, [domainId]: "Network error." }));
     } finally {
       setVerifying((v) => ({ ...v, [domainId]: false }));
+    }
+  }
+
+  async function handleSetDefault(domainId: string) {
+    if (!token) return;
+    setSettingDefault((s) => ({ ...s, [domainId]: true }));
+    try {
+      await setDefaultDomain(token, domainId);
+      setDomains((prev) =>
+        prev.map((d) => ({ ...d, isDefault: d.id === domainId }))
+      );
+    } catch {
+      // silently ignore
+    } finally {
+      setSettingDefault((s) => ({ ...s, [domainId]: false }));
     }
   }
 
@@ -155,6 +173,7 @@ export default function DomainsPage() {
               <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">Host</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">Default</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">Added</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -172,6 +191,22 @@ export default function DomainsPage() {
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-950 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
                         Pending
                       </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {domain.isDefault ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 dark:bg-blue-950 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400">
+                        ★ Default
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleSetDefault(domain.id)}
+                        disabled={settingDefault[domain.id]}
+                        className="rounded-lg border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 text-xs
+                          font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-40 transition-colors"
+                      >
+                        {settingDefault[domain.id] ? "Setting…" : "Set default"}
+                      </button>
                     )}
                   </td>
                   <td className="px-4 py-3 text-xs text-zinc-400">

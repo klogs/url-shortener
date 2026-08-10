@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useRef, useState, use } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import * as echarts from "echarts/core";
+import { LineChart, BarChart, PieChart } from "echarts/charts";
+import {
+  GridComponent, TooltipComponent, TitleComponent, LegendComponent,
+} from "echarts/components";
+import { CanvasRenderer } from "echarts/renderers";
 import {
   getLink,
   updateLink,
@@ -20,6 +26,8 @@ import {
   type GeoRouteDto,
   type LinkAnalytics,
 } from "@/lib/api";
+
+echarts.use([LineChart, BarChart, PieChart, GridComponent, TooltipComponent, TitleComponent, LegendComponent, CanvasRenderer]);
 
 const BASE = process.env.BACKEND_API_URL ?? "";
 
@@ -363,16 +371,39 @@ export default function LinkDetailPage({ params }: { params: Promise<PageParams>
         )}
       </div>
 
-      {/* Analytics sparkline */}
+      {/* Analytics */}
       {analytics && (
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Clicks (last {analytics.days} days)</h2>
-            <span className="text-sm font-semibold tabular-nums">
-              {analytics.total.toLocaleString()}
-            </span>
+        <div className="space-y-4">
+          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Clicks — last {analytics.days} days</h2>
+              <span className="text-sm font-semibold tabular-nums">
+                {analytics.total.toLocaleString()} total
+              </span>
+            </div>
+            <ClicksLineChart series={analytics.series} />
           </div>
-          <Sparkline series={analytics.series} />
+
+          {(analytics.countries.length > 0 || analytics.browsers.length > 0) && (
+            <div className="grid grid-cols-2 gap-4">
+              {analytics.countries.length > 0 && (
+                <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
+                  <h3 className="text-xs font-semibold mb-3 text-zinc-600 dark:text-zinc-400 uppercase tracking-wide">
+                    Countries
+                  </h3>
+                  <CountryBarChart items={analytics.countries} />
+                </div>
+              )}
+              {analytics.browsers.length > 0 && (
+                <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
+                  <h3 className="text-xs font-semibold mb-3 text-zinc-600 dark:text-zinc-400 uppercase tracking-wide">
+                    Browsers
+                  </h3>
+                  <BrowserBreakdown items={analytics.browsers} />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -595,65 +626,125 @@ function Chip({ color, children }: { color: "purple" | "blue"; children: React.R
   );
 }
 
-function Sparkline({ series }: { series: { date: string; count: number }[] }) {
-  const W = 480;
-  const H = 60;
-  const PAD = 4;
+const BROWSER_ICONS: Record<string, string> = {
+  Chrome: "🟡",
+  Firefox: "🦊",
+  Safari: "🧭",
+  Edge: "🔷",
+  Opera: "🔴",
+  IE: "🌐",
+  curl: "⌨️",
+  Python: "🐍",
+  Go: "🐹",
+  Other: "❓",
+  Unknown: "❓",
+};
+
+function ClicksLineChart({ series }: { series: { date: string; count: number }[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!ref.current || series.length === 0) { return; }
+    const chart = echarts.init(ref.current, null, { renderer: "canvas" });
+    chart.setOption({
+      grid: { top: 10, right: 10, bottom: 24, left: 36 },
+      xAxis: {
+        type: "category",
+        data: series.map((p) => p.date.slice(5)),
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { fontSize: 10, color: "#9ca3af" },
+      },
+      yAxis: {
+        type: "value",
+        minInterval: 1,
+        splitLine: { lineStyle: { color: "#f3f4f6" } },
+        axisLabel: { fontSize: 10, color: "#9ca3af" },
+      },
+      tooltip: { trigger: "axis", formatter: (p: unknown) => {
+        const params = p as { name: string; value: number }[];
+        return `${params[0].name}: ${params[0].value}`;
+      }},
+      series: [{
+        type: "line",
+        data: series.map((p) => p.count),
+        smooth: true,
+        lineStyle: { width: 2, color: "#6366f1" },
+        itemStyle: { color: "#6366f1" },
+        areaStyle: { color: { type: "linear", x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [{ offset: 0, color: "rgba(99,102,241,0.2)" }, { offset: 1, color: "rgba(99,102,241,0)" }] } },
+        symbol: "circle",
+        symbolSize: series.length > 20 ? 0 : 5,
+      }],
+    });
+    const ro = new ResizeObserver(() => chart.resize());
+    ro.observe(ref.current);
+    return () => { chart.dispose(); ro.disconnect(); };
+  }, [series]);
 
   if (series.length === 0) {
     return <p className="text-xs text-zinc-400">No click data yet.</p>;
   }
+  return <div ref={ref} style={{ width: "100%", height: 160 }} />;
+}
 
-  const max = Math.max(...series.map((p) => p.count), 1);
-  const xs = series.map((_, i) => PAD + (i / Math.max(series.length - 1, 1)) * (W - PAD * 2));
-  const ys = series.map((p) => PAD + (1 - p.count / max) * (H - PAD * 2));
+function CountryBarChart({ items }: { items: { label: string; count: number }[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const top = items.slice(0, 10);
 
-  const line = xs.map((x, i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(" ");
-  const area =
-    `${line} L${xs[xs.length - 1].toFixed(1)},${(H - PAD).toFixed(1)} L${xs[0].toFixed(1)},${(H - PAD).toFixed(1)} Z`;
+  useEffect(() => {
+    if (!ref.current) { return; }
+    const chart = echarts.init(ref.current);
+    chart.setOption({
+      grid: { top: 4, right: 10, bottom: 4, left: 56, containLabel: false },
+      xAxis: { type: "value", axisLabel: { show: false }, splitLine: { show: false } },
+      yAxis: {
+        type: "category",
+        data: top.map((i) => i.label).reverse(),
+        axisLabel: { fontSize: 11, color: "#6b7280", formatter: (v: string) => v === "Unknown" ? "Unknown" : `${v}` },
+        axisTick: { show: false },
+        axisLine: { show: false },
+      },
+      tooltip: { trigger: "axis" },
+      series: [{
+        type: "bar",
+        data: top.map((i) => i.count).reverse(),
+        itemStyle: { color: "#6366f1", borderRadius: [0, 4, 4, 0] },
+        barMaxWidth: 16,
+        label: { show: true, position: "right", fontSize: 10, color: "#9ca3af" },
+      }],
+    });
+    const ro = new ResizeObserver(() => chart.resize());
+    ro.observe(ref.current);
+    return () => { chart.dispose(); ro.disconnect(); };
+  }, [top]);
 
-  const labelEvery = Math.ceil(series.length / 5);
-  const labels = series
-    .map((p, i) => ({ x: xs[i], label: p.date.slice(5), i }))
-    .filter((_, i) => i % labelEvery === 0 || i === series.length - 1);
+  return <div ref={ref} style={{ width: "100%", height: Math.max(top.length * 28, 80) }} />;
+}
 
+function BrowserBreakdown({ items }: { items: { label: string; count: number }[] }) {
+  const total = items.reduce((s, i) => s + i.count, 0);
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H + 16}`}
-      className="w-full"
-      aria-label="Clicks sparkline"
-    >
-      <defs>
-        <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="currentColor" stopOpacity="0.15" />
-          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill="url(#spark-fill)" className="text-zinc-700 dark:text-zinc-300" />
-      <path
-        d={line}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        className="text-zinc-700 dark:text-zinc-300"
-      />
-      {labels.map(({ x, label }) => (
-        <text
-          key={label}
-          x={x}
-          y={H + 12}
-          textAnchor="middle"
-          fontSize="9"
-          className="fill-zinc-400"
-        >
-          {label}
-        </text>
+    <ul className="space-y-2">
+      {items.slice(0, 8).map((item) => (
+        <li key={item.label} className="space-y-0.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="flex items-center gap-1.5 font-medium">
+              <span>{BROWSER_ICONS[item.label] ?? "🌐"}</span>
+              {item.label}
+            </span>
+            <span className="tabular-nums text-zinc-500">
+              {item.count.toLocaleString()} ({Math.round((item.count / total) * 100)}%)
+            </span>
+          </div>
+          <div className="h-1.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-indigo-500"
+              style={{ width: `${Math.round((item.count / total) * 100)}%` }}
+            />
+          </div>
+        </li>
       ))}
-      {series.map((p, i) => (
-        <title key={i}>{`${p.date}: ${p.count}`}</title>
-      ))}
-    </svg>
+    </ul>
   );
 }

@@ -38,7 +38,7 @@ export default function AdminTenantDetailPage({
       .then((u) => {
         setUsage(u);
         const current = PLANS.find(
-          (p) => p.label.toLowerCase() === u.plan.toLowerCase()
+          (p) => p.value == u.plan
         );
         setSelectedPlan(current?.value ?? 0);
       })

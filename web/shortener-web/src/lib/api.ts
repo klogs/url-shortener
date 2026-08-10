@@ -41,6 +41,7 @@ export interface LinksResult {
 export interface DomainSummary {
   id: string;
   host: string;
+  isDefault: boolean;
   isVerified: boolean;
   createdAtUtc: string;
 }
@@ -168,6 +169,14 @@ export async function listDomains(token: string): Promise<DomainSummary[]> {
   return res.json() as Promise<DomainSummary[]>;
 }
 
+export async function setDefaultDomain(token: string, domainId: string): Promise<void> {
+  const res = await apiFetch(`/api/v1/domains/${domainId}/set-default`, token, { method: "POST" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { detail?: string }).detail ?? `Failed (${res.status})`);
+  }
+}
+
 // ── Authenticated: variants ───────────────────────────────────────────────────
 
 export async function listVariants(
@@ -283,7 +292,7 @@ export interface PlanLimits {
 export interface TenantUsage {
   linkCount: number;
   customDomainCount: number;
-  plan: string;
+  plan: number;
   limits: PlanLimits;
 }
 
@@ -358,10 +367,17 @@ export interface DailyPoint {
   count: number;
 }
 
+export interface BreakdownItem {
+  label: string;
+  count: number;
+}
+
 export interface LinkAnalytics {
   total: number;
   days: number;
   series: DailyPoint[];
+  countries: BreakdownItem[];
+  browsers: BreakdownItem[];
 }
 
 export async function getLinkAnalytics(

@@ -31,4 +31,15 @@ internal sealed class FakeDomainRepository : IDomainRepository
     }
 
     public Task UpdateAsync(TenantDomain domain, CancellationToken ct) => Task.CompletedTask;
+
+    public Task<TenantDomain?> GetByIdAsync(Guid id, CancellationToken ct)
+        => Task.FromResult(_store.FirstOrDefault(d => d.Id == id));
+
+    public Task SetDefaultAsync(Guid domainId, Guid tenantId, CancellationToken ct)
+    {
+        foreach (var d in _store.Where(d => d.TenantId == tenantId)) { d.UnsetDefault(); }
+        var target = _store.FirstOrDefault(d => d.Id == domainId && d.TenantId == tenantId);
+        target?.SetAsDefault();
+        return Task.CompletedTask;
+    }
 }

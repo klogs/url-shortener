@@ -1,3 +1,5 @@
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +18,7 @@ public sealed class RabbitMqAnalyticsConsumer(
     IServiceScopeFactory scopeFactory,
     IOptions<RabbitMqOptions> rabbitOpts,
     IOptions<ClickEventOptions> analyticsOpts,
+    IHttpClientFactory httpClientFactory,
     ILogger<RabbitMqAnalyticsConsumer> logger) : BackgroundService
 {
     private readonly RabbitMqOptions _rabbit = rabbitOpts.Value;
@@ -70,6 +73,16 @@ public sealed class RabbitMqAnalyticsConsumer(
                         var evt = JsonSerializer.Deserialize<ClickEvent>(json);
                         if (evt is not null)
                         {
+                            // Enrich with country if IP is available and country not already set
+                            if (evt.Country is null && !string.IsNullOrEmpty(evt.RemoteIp))
+                            {
+                                var country = await ResolveCountryAsync(evt.RemoteIp, stoppingToken);
+                                if (country is not null)
+                                {
+                                    evt = evt with { Country = country };
+                                }
+                            }
+
                             using var scope = scopeFactory.CreateScope();
                             var repo = scope.ServiceProvider.GetRequiredService<IClickEventRepository>();
                             await repo.InsertAsync(evt, stoppingToken);
@@ -106,4 +119,21 @@ public sealed class RabbitMqAnalyticsConsumer(
             }
         }
     }
+
+    private async Task<string?> ResolveCountryAsync(string ip, CancellationToken ct)
+    {
+        try
+        {
+            var client = httpClientFactory.CreateClient("geoip");
+            var response = await client.GetFromJsonAsync<GeoIpResponse>($"/{Uri.EscapeDataString(ip)}", ct);
+            return response?.CountryCode is { Length: 2 } cc ? cc : null;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogDebug(ex, "GeoIP lookup failed for IP {Ip}.", ip);
+            return null;
+        }
+    }
+
+    private sealed record GeoIpResponse(string? CountryCode);
 }
