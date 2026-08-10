@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Worker">
   <PropertyGroup>
     <RootNamespace>Shortener.Worker</RootNamespace>
+    <UserSecretsId>7e076ccc-f238-48f2-8d26-1f3cd5041f0c</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
