@@ -32,8 +32,8 @@ internal sealed class FakeDomainRepository : IDomainRepository
 
     public Task UpdateAsync(TenantDomain domain, CancellationToken ct) => Task.CompletedTask;
 
-    public Task<TenantDomain?> GetActiveByIdAsync(Guid id, CancellationToken ct)
-        => Task.FromResult(_store.FirstOrDefault(d => d.Id == id));
+    public Task<TenantDomain?> GetActiveByIdAsync(Guid id, Guid tenantId, CancellationToken ct)
+        => Task.FromResult(_store.FirstOrDefault(d => d.Id == id && d.TenantId == tenantId));
 
     public Task SetDefaultAsync(Guid domainId, Guid tenantId, CancellationToken ct)
     {
