@@ -303,7 +303,7 @@ export interface SystemStats {
 export interface TenantSummary {
   id: string;
   name: string;
-  plan: string;
+  plan: number;
   isActive: boolean;
   createdAtUtc: string;
 }
