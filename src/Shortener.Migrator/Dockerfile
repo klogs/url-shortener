@@ -13,7 +13,7 @@ COPY src/ src/
 RUN dotnet publish src/Shortener.Migrator/Shortener.Migrator.csproj \
     -c Release -o /app/publish --no-restore
 
-FROM mcr.microsoft.com/dotnet/runtime:10.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 USER $APP_UID
