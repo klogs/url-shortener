@@ -52,9 +52,12 @@ sed \
   -e "s|\${DOMAIN_API}|${DOMAIN_API}|g" \
   "${TEMPLATE}" > "${HTTPS_CONF}"
 
-# ── Step 4: Start nginx (now has both HTTP + HTTPS configs) ───────────────────
-echo ">>> Starting nginx..."
+# ── Step 4: Start or reload nginx ────────────────────────────────────────────
+echo ">>> Starting/reloading nginx..."
 docker compose -f "${COMPOSE_FILE}" up -d nginx
+
+# Reload config if nginx was already running (up -d alone doesn't reload)
+docker compose -f "${COMPOSE_FILE}" exec nginx nginx -s reload 2>/dev/null || true
 
 echo ""
 echo "Done!"
