@@ -18,7 +18,6 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 ENV_FILE="${PROJECT_ROOT}/.env"
 
 # Read a single KEY=value from the .env file without sourcing it.
-# Handles comments, blank lines, and Windows CRLF endings.
 read_env() {
   if [ -f "${ENV_FILE}" ]; then
     grep -E "^${1}=" "${ENV_FILE}" | head -1 | cut -d= -f2- | tr -d '\r"'"'"
@@ -37,20 +36,27 @@ COMPOSE_FILE="${PROJECT_ROOT}/docker-compose-with-nginx.yml"
 
 echo "Domains  : ${DOMAIN_REDIRECT}  /  ${DOMAIN_API}"
 echo "Email    : ${CERTBOT_EMAIL}"
-echo "Compose  : ${COMPOSE_FILE}"
 echo ""
 
-# ── Create webroot directory ───────────────────────────────────────────────────
-mkdir -p "${PROJECT_ROOT}/infra/nginx/certbot/www/.well-known/acme-challenge"
+# ── Step 1: Create dummy self-signed cert so nginx can start ──────────────────
+# nginx refuses to start if the ssl_certificate file doesn't exist.
+echo ">>> Creating temporary self-signed certificate..."
+docker compose -f "${COMPOSE_FILE}" run --rm --no-deps certbot \
+  sh -c "
+    mkdir -p /etc/letsencrypt/live/${DOMAIN_REDIRECT} &&
+    openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
+      -keyout /etc/letsencrypt/live/${DOMAIN_REDIRECT}/privkey.pem \
+      -out    /etc/letsencrypt/live/${DOMAIN_REDIRECT}/fullchain.pem \
+      -subj   '/CN=localhost'
+  "
 
-# ── Start nginx on port 80 only (no HTTPS yet — certs don't exist) ────────────
-echo ">>> Starting nginx for ACME challenge..."
+# ── Step 2: Start nginx (it can now load the dummy cert) ─────────────────────
+echo ">>> Starting nginx..."
 docker compose -f "${COMPOSE_FILE}" up -d nginx
-
 sleep 3
 
-# ── Staging cert: verify ACME connectivity before hitting rate limits ──────────
-echo ">>> Requesting staging certificate (dry-run verification)..."
+# ── Step 3: Request staging cert (verify ACME before hitting rate limits) ─────
+echo ">>> Requesting Let's Encrypt staging certificate (connectivity check)..."
 docker compose -f "${COMPOSE_FILE}" run --rm --no-deps certbot certonly \
   --webroot \
   --webroot-path=/var/www/certbot \
@@ -66,6 +72,7 @@ echo ">>> Staging OK. Requesting production certificate..."
 docker compose -f "${COMPOSE_FILE}" run --rm --no-deps certbot delete \
   --cert-name "${DOMAIN_REDIRECT}" --non-interactive 2>/dev/null || true
 
+# ── Step 4: Request production certificate ────────────────────────────────────
 docker compose -f "${COMPOSE_FILE}" run --rm --no-deps certbot certonly \
   --webroot \
   --webroot-path=/var/www/certbot \
@@ -79,12 +86,10 @@ docker compose -f "${COMPOSE_FILE}" run --rm --no-deps certbot certonly \
 
 echo ">>> Production certificate obtained!"
 
-# ── Reload nginx to pick up TLS certificates ──────────────────────────────────
-echo ">>> Reloading nginx..."
-docker compose -f "${COMPOSE_FILE}" exec nginx nginx -s reload || \
-  docker compose -f "${COMPOSE_FILE}" restart nginx
+# ── Step 5: Reload nginx with the real certificate ───────────────────────────
+echo ">>> Reloading nginx with real certificate..."
+docker compose -f "${COMPOSE_FILE}" exec nginx nginx -s reload
 
 echo ""
-echo "Done! Certs: /etc/letsencrypt/live/${DOMAIN_REDIRECT}/"
-echo "Start the full stack:"
+echo "Done! Start the full stack:"
 echo "  docker compose -f docker-compose-with-nginx.yml up -d"
