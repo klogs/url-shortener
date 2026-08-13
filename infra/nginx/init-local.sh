@@ -14,7 +14,7 @@ ENV_FILE="${PROJECT_ROOT}/.env"
 CONF_D="${SCRIPT_DIR}/conf.d"
 TEMPLATE="${SCRIPT_DIR}/templates/20-https.conf.template"
 HTTPS_CONF="${CONF_D}/20-https.conf"
-COMPOSE_FILE="${PROJECT_ROOT}/docker-compose-with-nginx.yml"
+COMPOSE_FILE="${PROJECT_ROOT}/docker-compose.yml"
 
 read_env() {
   if [ -f "${ENV_FILE}" ]; then
@@ -64,4 +64,4 @@ echo "Done!"
 echo "  Browser will show an SSL warning — click 'Advanced > Proceed' to accept."
 echo ""
 echo "Start the full stack:"
-echo "  docker compose -f docker-compose-with-nginx.yml up -d"
+echo "  docker compose -f docker-compose.yml up -d"

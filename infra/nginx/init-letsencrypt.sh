@@ -1,6 +1,6 @@
 #!/bin/sh
 # One-time Let's Encrypt certificate initialisation.
-# Run this ONCE before starting the full stack with docker-compose-with-nginx.yml.
+# Run this ONCE before starting the full stack with docker-compose.yml.
 #
 # Usage:
 #   chmod +x infra/nginx/init-letsencrypt.sh
@@ -19,7 +19,7 @@ ENV_FILE="${PROJECT_ROOT}/.env"
 CONF_D="${SCRIPT_DIR}/conf.d"
 TEMPLATE="${SCRIPT_DIR}/templates/20-https.conf.template"
 HTTPS_CONF="${CONF_D}/20-https.conf"
-COMPOSE_FILE="${PROJECT_ROOT}/docker-compose-with-nginx.yml"
+COMPOSE_FILE="${PROJECT_ROOT}/docker-compose.yml"
 
 # Read a single KEY=value from the .env file without sourcing it.
 read_env() {
@@ -96,6 +96,6 @@ docker compose -f "${COMPOSE_FILE}" exec nginx nginx -s reload
 
 echo ""
 echo "Done! Start the full stack:"
-echo "  docker compose -f docker-compose-with-nginx.yml up -d"
+echo "  docker compose -f docker-compose.yml up -d"
 echo ""
 echo "Note: ${HTTPS_CONF} was generated — do not commit it."
