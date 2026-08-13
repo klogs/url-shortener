@@ -53,7 +53,8 @@ sleep 3
 
 # ── Step 3: Staging cert — verify ACME before hitting rate limits ─────────────
 echo ">>> Requesting Let's Encrypt staging certificate (connectivity check)..."
-docker compose -f "${COMPOSE_FILE}" run --rm --no-deps certbot certonly \
+docker compose -f "${COMPOSE_FILE}" run --rm --no-deps --entrypoint certbot certbot \
+  certonly \
   --webroot \
   --webroot-path=/var/www/certbot \
   --email "${CERTBOT_EMAIL}" \
@@ -65,11 +66,12 @@ docker compose -f "${COMPOSE_FILE}" run --rm --no-deps certbot certonly \
   -d "${DOMAIN_API}"
 
 echo ">>> Staging OK. Deleting staging cert and requesting production cert..."
-docker compose -f "${COMPOSE_FILE}" run --rm --no-deps certbot delete \
-  --cert-name "${DOMAIN_REDIRECT}" --non-interactive 2>/dev/null || true
+docker compose -f "${COMPOSE_FILE}" run --rm --no-deps --entrypoint certbot certbot \
+  delete --cert-name "${DOMAIN_REDIRECT}" --non-interactive 2>/dev/null || true
 
 # ── Step 4: Production certificate ───────────────────────────────────────────
-docker compose -f "${COMPOSE_FILE}" run --rm --no-deps certbot certonly \
+docker compose -f "${COMPOSE_FILE}" run --rm --no-deps --entrypoint certbot certbot \
+  certonly \
   --webroot \
   --webroot-path=/var/www/certbot \
   --email "${CERTBOT_EMAIL}" \
