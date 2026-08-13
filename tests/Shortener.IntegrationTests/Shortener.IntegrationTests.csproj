@@ -3,6 +3,10 @@
   <PropertyGroup>
     <RootNamespace>Shortener.IntegrationTests</RootNamespace>
     <IsPackable>false</IsPackable>
+    <!-- SSH.NET is a transitive dep of Testcontainers; no patched version exists yet.
+         GHSA-q939-rpr3-3284 affects the SSH tunnel feature (remote Docker hosts only),
+         which is not used in CI — we connect to local Docker. -->
+    <NoWarn>$(NoWarn);NU1903</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
