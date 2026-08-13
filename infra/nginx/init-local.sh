@@ -36,14 +36,12 @@ rm -f "${HTTPS_CONF}"
 
 # ── Step 2: Self-signed certificate (365 days) ────────────────────────────────
 echo ">>> Creating self-signed certificate..."
-docker compose -f "${COMPOSE_FILE}" run --rm --no-deps certbot \
-  sh -c "
-    mkdir -p /etc/letsencrypt/live/${DOMAIN_REDIRECT} &&
-    openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
-      -keyout /etc/letsencrypt/live/${DOMAIN_REDIRECT}/privkey.pem \
-      -out    /etc/letsencrypt/live/${DOMAIN_REDIRECT}/fullchain.pem \
-      -subj   '/CN=${DOMAIN_REDIRECT}'
-  "
+docker compose -f "${COMPOSE_FILE}" run --rm --no-deps --entrypoint sh certbot \
+  -c "mkdir -p /etc/letsencrypt/live/${DOMAIN_REDIRECT} &&
+      openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
+        -keyout /etc/letsencrypt/live/${DOMAIN_REDIRECT}/privkey.pem \
+        -out    /etc/letsencrypt/live/${DOMAIN_REDIRECT}/fullchain.pem \
+        -subj   '/CN=${DOMAIN_REDIRECT}'"
 
 # ── Step 3: Render HTTPS nginx config from template ───────────────────────────
 echo ">>> Writing HTTPS nginx config..."
