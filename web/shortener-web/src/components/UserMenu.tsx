@@ -21,9 +21,9 @@ export function UserMenu() {
         {session.user.name ?? session.user.email}
       </span>
       <button
-        onClick={() => signOut({ callbackUrl: "/" })}
-        className="shrink-0 rounded px-1.5 py-0.5 text-xs text-zinc-500 hover:bg-zinc-200
-          dark:hover:bg-zinc-800 transition-colors"
+        onClick={() => signOut({ redirectTo: "/" })}
+        className="shrink-0 rounded px-1.5 py-0.5 text-xs text-muted
+          hover:bg-black/5 dark:hover:bg-white/8 transition-colors"
       >
         Sign out
       </button>

@@ -65,6 +65,20 @@ export interface GeoRouteDto {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Fired on the window whenever an authenticated request comes back 401.
+ * SessionGuard listens for it and sends the user back through sign-in.
+ */
+export const AUTH_UNAUTHORIZED_EVENT = "klogs:auth-unauthorized";
+
+/** Thrown by apiFetch callers so pages can tell "expired" from "broken". */
+export class UnauthorizedError extends Error {
+  constructor(message = "Your session has expired.") {
+    super(message);
+    this.name = "UnauthorizedError";
+  }
+}
+
 async function apiFetch(
   path: string,
   token: string | undefined,
@@ -78,7 +92,17 @@ async function apiFetch(
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
-  return fetch(`${BASE}${path}`, { ...init, headers });
+
+  const res = await fetch(`${BASE}${path}`, { ...init, headers });
+
+  // A 401 means the token is dead regardless of what the session cookie says.
+  // Announce it so the app can re-authenticate instead of rendering empty pages.
+  if (res.status === 401 && typeof window !== "undefined") {
+    window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
+    throw new UnauthorizedError();
+  }
+
+  return res;
 }
 
 // ── Public ───────────────────────────────────────────────────────────────────

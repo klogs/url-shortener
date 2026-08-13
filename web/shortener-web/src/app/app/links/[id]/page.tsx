@@ -10,6 +10,9 @@ import {
   GridComponent, TooltipComponent, TitleComponent, LegendComponent,
 } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
+import { useTheme } from "@/components/ThemeProvider";
+import { BrowserIcon, BROWSER_COLORS } from "@/components/BrowserIcon";
+import { WorldMapChart, CountryList, useCountryNames } from "@/components/charts/WorldMapChart";
 import {
   getLink,
   updateLink,
@@ -384,24 +387,21 @@ export default function LinkDetailPage({ params }: { params: Promise<PageParams>
             <ClicksLineChart series={analytics.series} />
           </div>
 
-          {(analytics.countries.length > 0 || analytics.browsers.length > 0) && (
-            <div className="grid grid-cols-2 gap-4">
-              {analytics.countries.length > 0 && (
-                <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
-                  <h3 className="text-xs font-semibold mb-3 text-zinc-600 dark:text-zinc-400 uppercase tracking-wide">
-                    Countries
-                  </h3>
-                  <CountryBarChart items={analytics.countries} />
-                </div>
-              )}
-              {analytics.browsers.length > 0 && (
-                <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
-                  <h3 className="text-xs font-semibold mb-3 text-zinc-600 dark:text-zinc-400 uppercase tracking-wide">
-                    Browsers
-                  </h3>
-                  <BrowserBreakdown items={analytics.browsers} />
-                </div>
-              )}
+          {analytics.countries.length > 0 && (
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 space-y-4">
+              <h3 className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wide">
+                Countries
+              </h3>
+              <CountriesCard items={analytics.countries} />
+            </div>
+          )}
+
+          {analytics.browsers.length > 0 && (
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
+              <h3 className="text-xs font-semibold mb-3 text-zinc-600 dark:text-zinc-400 uppercase tracking-wide">
+                Browsers
+              </h3>
+              <BrowserBreakdown items={analytics.browsers} />
             </div>
           )}
         </div>
@@ -635,53 +635,51 @@ function Chip({ color, children }: { color: "purple" | "blue"; children: React.R
   );
 }
 
-const BROWSER_ICONS: Record<string, string> = {
-  Chrome: "🟡",
-  Firefox: "🦊",
-  Safari: "🧭",
-  Edge: "🔷",
-  Opera: "🔴",
-  IE: "🌐",
-  curl: "⌨️",
-  Python: "🐍",
-  Go: "🐹",
-  Other: "❓",
-  Unknown: "❓",
-};
-
 function ClicksLineChart({ series }: { series: { date: string; count: number }[] }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (!ref.current || series.length === 0) { return; }
+    const dark = theme === "dark";
+    const axis = dark ? "#9a9aa8" : "#63636e";
+    const grid = dark ? "rgba(255,255,255,0.07)" : "#eceef4";
+
     const chart = echarts.init(ref.current, null, { renderer: "canvas" });
     chart.setOption({
+      backgroundColor: "transparent",
       grid: { top: 10, right: 10, bottom: 24, left: 36 },
       xAxis: {
         type: "category",
         data: series.map((p) => p.date.slice(5)),
         axisLine: { show: false },
         axisTick: { show: false },
-        axisLabel: { fontSize: 10, color: "#9ca3af" },
+        axisLabel: { fontSize: 10, color: axis },
       },
       yAxis: {
         type: "value",
         minInterval: 1,
-        splitLine: { lineStyle: { color: "#f3f4f6" } },
-        axisLabel: { fontSize: 10, color: "#9ca3af" },
+        splitLine: { lineStyle: { color: grid } },
+        axisLabel: { fontSize: 10, color: axis },
       },
-      tooltip: { trigger: "axis", formatter: (p: unknown) => {
-        const params = p as { name: string; value: number }[];
-        return `${params[0].name}: ${params[0].value}`;
-      }},
+      tooltip: {
+        trigger: "axis",
+        backgroundColor: dark ? "#1b1b2b" : "#ffffff",
+        borderColor: dark ? "rgba(255,255,255,0.12)" : "rgba(16,16,28,0.12)",
+        textStyle: { color: dark ? "#f0f0f8" : "#10101c", fontSize: 12 },
+        formatter: (p: unknown) => {
+          const params = p as { name: string; value: number }[];
+          return `${params[0].name}: <b>${params[0].value}</b>`;
+        },
+      },
       series: [{
         type: "line",
         data: series.map((p) => p.count),
         smooth: true,
-        lineStyle: { width: 2, color: "#6366f1" },
-        itemStyle: { color: "#6366f1" },
+        lineStyle: { width: 2, color: "#0d4dff" },
+        itemStyle: { color: "#0d4dff" },
         areaStyle: { color: { type: "linear", x: 0, y: 0, x2: 0, y2: 1,
-          colorStops: [{ offset: 0, color: "rgba(99,102,241,0.2)" }, { offset: 1, color: "rgba(99,102,241,0)" }] } },
+          colorStops: [{ offset: 0, color: "rgba(13,77,255,0.28)" }, { offset: 1, color: "rgba(32,210,255,0)" }] } },
         symbol: "circle",
         symbolSize: series.length > 20 ? 0 : 5,
       }],
@@ -689,71 +687,54 @@ function ClicksLineChart({ series }: { series: { date: string; count: number }[]
     const ro = new ResizeObserver(() => chart.resize());
     ro.observe(ref.current);
     return () => { chart.dispose(); ro.disconnect(); };
-  }, [series]);
+  }, [series, theme]);
 
   if (series.length === 0) {
-    return <p className="text-xs text-zinc-400">No click data yet.</p>;
+    return <p className="text-xs text-muted">No click data yet.</p>;
   }
   return <div ref={ref} style={{ width: "100%", height: 160 }} />;
 }
 
-function CountryBarChart({ items }: { items: { label: string; count: number }[] }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const top = items.slice(0, 10);
-
-  useEffect(() => {
-    if (!ref.current) { return; }
-    const chart = echarts.init(ref.current);
-    chart.setOption({
-      grid: { top: 4, right: 10, bottom: 4, left: 56, containLabel: false },
-      xAxis: { type: "value", axisLabel: { show: false }, splitLine: { show: false } },
-      yAxis: {
-        type: "category",
-        data: top.map((i) => i.label).reverse(),
-        axisLabel: { fontSize: 11, color: "#6b7280", formatter: (v: string) => v === "Unknown" ? "Unknown" : `${v}` },
-        axisTick: { show: false },
-        axisLine: { show: false },
-      },
-      tooltip: { trigger: "axis" },
-      series: [{
-        type: "bar",
-        data: top.map((i) => i.count).reverse(),
-        itemStyle: { color: "#6366f1", borderRadius: [0, 4, 4, 0] },
-        barMaxWidth: 16,
-        label: { show: true, position: "right", fontSize: 10, color: "#9ca3af" },
-      }],
-    });
-    const ro = new ResizeObserver(() => chart.resize());
-    ro.observe(ref.current);
-    return () => { chart.dispose(); ro.disconnect(); };
-  }, [top]);
-
-  return <div ref={ref} style={{ width: "100%", height: Math.max(top.length * 28, 80) }} />;
+/** World choropleth plus a ranked list, so exact figures stay readable. */
+function CountriesCard({ items }: { items: { label: string; count: number }[] }) {
+  const names = useCountryNames();
+  return (
+    <div className="space-y-4">
+      <WorldMapChart items={items} height={280} />
+      <div className="border-t border-zinc-100 dark:border-zinc-800 pt-3">
+        <CountryList items={items} names={names ?? undefined} />
+      </div>
+    </div>
+  );
 }
 
 function BrowserBreakdown({ items }: { items: { label: string; count: number }[] }) {
   const total = items.reduce((s, i) => s + i.count, 0);
   return (
-    <ul className="space-y-2">
-      {items.slice(0, 8).map((item) => (
-        <li key={item.label} className="space-y-0.5">
-          <div className="flex items-center justify-between text-xs">
-            <span className="flex items-center gap-1.5 font-medium">
-              <span>{BROWSER_ICONS[item.label] ?? "🌐"}</span>
-              {item.label}
-            </span>
-            <span className="tabular-nums text-zinc-500">
-              {item.count.toLocaleString()} ({Math.round((item.count / total) * 100)}%)
-            </span>
-          </div>
-          <div className="h-1.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-indigo-500"
-              style={{ width: `${Math.round((item.count / total) * 100)}%` }}
-            />
-          </div>
-        </li>
-      ))}
+    <ul className="space-y-2.5">
+      {items.slice(0, 8).map((item) => {
+        const pct = total > 0 ? Math.round((item.count / total) * 100) : 0;
+        const color = BROWSER_COLORS[item.label] ?? "#0d4dff";
+        return (
+          <li key={item.label} className="space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="flex items-center gap-2 font-medium">
+                <BrowserIcon name={item.label} className="h-4 w-4" />
+                {item.label}
+              </span>
+              <span className="tabular-nums text-muted">
+                {item.count.toLocaleString()} ({pct}%)
+              </span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-zinc-100 dark:bg-white/8 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-[width] duration-500"
+                style={{ width: `${pct}%`, backgroundColor: color }}
+              />
+            </div>
+          </li>
+        );
+      })}
     </ul>
   );
 }

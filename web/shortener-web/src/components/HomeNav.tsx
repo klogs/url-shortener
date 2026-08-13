@@ -3,9 +3,13 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
+import { KlogsLogo } from "@/components/KlogsLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { useTheme } from "@/components/ThemeProvider";
 
 export function HomeNav() {
   const { data: session, status } = useSession();
+  const { theme } = useTheme();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -20,16 +24,14 @@ export function HomeNav() {
   }, [open]);
 
   return (
-    <header className="w-full border-b border-zinc-100 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-30">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 h-12">
-        <Link
-          href="/"
-          className="text-sm font-semibold tracking-tight hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-        >
-          Shortener
+    <header className="w-full border-b border-edge bg-background/90 backdrop-blur-sm sticky top-0 z-30">
+      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 h-14">
+        <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
+          <KlogsLogo height={22} textFill={theme === "dark" ? "#ffffff" : "#10101C"} />
         </Link>
 
         <nav className="flex items-center gap-2">
+          <ThemeToggle className="mr-1" />
           {status === "loading" ? (
             <span className="h-7 w-20 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
           ) : session?.user ? (
@@ -86,7 +88,7 @@ export function HomeNav() {
                   </Link>
                   <div className="my-1 h-px bg-zinc-100 dark:bg-zinc-800" />
                   <button
-                    onClick={() => { setOpen(false); void signOut({ callbackUrl: "/" }); }}
+                    onClick={() => { setOpen(false); void signOut({ redirectTo: "/" }); }}
                     className="flex w-full items-center gap-2 px-4 py-2 text-zinc-500 dark:text-zinc-400
                       hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
                   >
@@ -102,15 +104,13 @@ export function HomeNav() {
             <div className="flex items-center gap-2">
               <Link
                 href="/app"
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-600 dark:text-zinc-400
-                  hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
               >
                 Sign in
               </Link>
               <Link
                 href="/app"
-                className="rounded-lg bg-zinc-900 dark:bg-white px-3 py-1.5 text-sm font-medium
-                  text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors"
+                className="rounded-lg bg-[#0D4DFF] hover:bg-[#3E6EFF] px-3 py-1.5 text-sm font-medium text-white transition-colors"
               >
                 Get started
               </Link>

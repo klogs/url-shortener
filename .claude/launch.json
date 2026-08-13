@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "shortener-web-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "web/shortener-web", "run", "dev"],
+      "port": 3000,
+      "url": "http://localhost:3000"
+    }
+  ]
+}

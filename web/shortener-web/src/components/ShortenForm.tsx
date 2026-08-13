@@ -35,12 +35,12 @@ export default function ShortenForm() {
   }
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="rounded-xl border border-edge bg-raised p-6 shadow-sm backdrop-blur-sm">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label
             htmlFor="url"
-            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+            className="block text-sm font-medium text-muted mb-1"
           >
             Destination URL
           </label>
@@ -51,18 +51,17 @@ export default function ShortenForm() {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://example.com/very/long/url"
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm shadow-sm
-              focus:outline-none focus:ring-2 focus:ring-zinc-500
-              dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:placeholder-zinc-500"
+            className="w-full rounded-lg border border-edge bg-background px-3 py-2.5 text-sm
+              placeholder-zinc-400 dark:placeholder-zinc-600
+              focus:outline-none focus:ring-2 focus:ring-brand-600 transition-shadow"
           />
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white
-            hover:bg-zinc-700 disabled:opacity-50 transition-colors
-            dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+          className="w-full rounded-lg bg-brand-600 hover:bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white
+            disabled:opacity-50 transition-colors"
         >
           {loading ? "Shortening…" : "Shorten"}
         </button>

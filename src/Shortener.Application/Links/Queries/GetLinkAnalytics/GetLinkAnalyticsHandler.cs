@@ -31,18 +31,33 @@ public sealed class GetLinkAnalyticsHandler(IClickEventRepository clickEvents, T
         return new LinkAnalyticsResult(total, days, series, countryBreakdown, browserBreakdown);
     }
 
+    /// <summary>
+    /// Order matters: every Chromium-based browser also carries "Chrome/" in its
+    /// user agent, so the derivatives (Edge, Opera, Samsung) must be matched
+    /// before the plain Chrome check or they all collapse into "Chrome".
+    /// </summary>
     private static string ParseBrowser(string userAgent)
     {
         if (string.IsNullOrEmpty(userAgent)) { return "Unknown"; }
-        if (userAgent.Contains("Edg/") || userAgent.Contains("EdgA/")) { return "Edge"; }
-        if (userAgent.Contains("Chrome/") && !userAgent.Contains("Chromium")) { return "Chrome"; }
-        if (userAgent.Contains("Firefox/")) { return "Firefox"; }
-        if (userAgent.Contains("Safari/") && !userAgent.Contains("Chrome")) { return "Safari"; }
-        if (userAgent.Contains("OPR/") || userAgent.Contains("Opera")) { return "Opera"; }
-        if (userAgent.Contains("MSIE") || userAgent.Contains("Trident")) { return "IE"; }
+
+        // Non-browser clients first — their agents are unambiguous.
         if (userAgent.Contains("curl/")) { return "curl"; }
-        if (userAgent.Contains("python") || userAgent.Contains("Python")) { return "Python"; }
+        if (userAgent.Contains("python", StringComparison.OrdinalIgnoreCase)) { return "Python"; }
         if (userAgent.Contains("Go-http-client")) { return "Go"; }
+
+        // Chromium derivatives, most specific first.
+        if (userAgent.Contains("Edg/") || userAgent.Contains("EdgA/") || userAgent.Contains("EdgiOS/")) { return "Edge"; }
+        if (userAgent.Contains("OPR/") || userAgent.Contains("Opera")) { return "Opera"; }
+        if (userAgent.Contains("SamsungBrowser/")) { return "Samsung"; }
+        // Brave ships a Chrome-identical agent by default to resist fingerprinting,
+        // so this only catches the builds that opt into announcing themselves.
+        if (userAgent.Contains("Brave/")) { return "Brave"; }
+        if (userAgent.Contains("Chrome/") || userAgent.Contains("CriOS/")) { return "Chrome"; }
+
+        if (userAgent.Contains("Firefox/") || userAgent.Contains("FxiOS/")) { return "Firefox"; }
+        if (userAgent.Contains("Safari/")) { return "Safari"; }
+        if (userAgent.Contains("MSIE") || userAgent.Contains("Trident")) { return "IE"; }
+
         return "Other";
     }
 }
