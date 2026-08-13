@@ -9,7 +9,8 @@
 # Prerequisites:
 #   - DNS for $DOMAIN_REDIRECT and $DOMAIN_API must already point to this server.
 #   - Docker + docker compose must be installed.
-#   - .env file in the project root must contain DOMAIN_REDIRECT, DOMAIN_API, CERTBOT_EMAIL.
+#   - .env must contain DOMAIN_REDIRECT, DOMAIN_API, CERTBOT_EMAIL.
+#   - Cloudflare proxy (orange cloud) must be OFF during this script.
 
 set -eu
 
@@ -21,7 +22,9 @@ TEMPLATE="${SCRIPT_DIR}/templates/20-https.conf.template"
 HTTPS_CONF="${CONF_D}/20-https.conf"
 COMPOSE_FILE="${PROJECT_ROOT}/docker-compose.yml"
 
-# Read a single KEY=value from the .env file without sourcing it.
+# Docker Compose project name defaults to the lowercased directory name.
+PROJECT_NAME="$(basename "${PROJECT_ROOT}" | tr '[:upper:]' '[:lower:]')"
+
 read_env() {
   if [ -f "${ENV_FILE}" ]; then
     grep -E "^${1}=" "${ENV_FILE}" | head -1 | cut -d= -f2- | tr -d '\r"'"'"
@@ -36,13 +39,22 @@ CERTBOT_EMAIL="${CERTBOT_EMAIL:-$(read_env CERTBOT_EMAIL)}"
 : "${DOMAIN_API:?DOMAIN_API not set. Add it to .env or export it before running.}"
 : "${CERTBOT_EMAIL:?CERTBOT_EMAIL not set. Add it to .env or export it before running.}"
 
+echo "Project  : ${PROJECT_NAME}"
 echo "Domains  : ${DOMAIN_REDIRECT}  /  ${DOMAIN_API}"
 echo "Email    : ${CERTBOT_EMAIL}"
 echo ""
 
-# ── Step 1: Remove any existing HTTPS config so nginx starts HTTP-only ─────────
-# 10-http.conf is always present (committed to git) and serves port 80 only.
-# nginx can start without SSL cert because 20-https.conf doesn't exist yet.
+# Helper: run certbot directly via docker run (bypasses compose entrypoint override).
+certbot_run() {
+  docker run --rm \
+    --network "${PROJECT_NAME}_default" \
+    -v "${PROJECT_NAME}_letsencrypt_data:/etc/letsencrypt" \
+    -v "${PROJECT_NAME}_certbot_www:/var/www/certbot" \
+    certbot/certbot:latest \
+    "$@"
+}
+
+# ── Step 1: Remove stale HTTPS config so nginx starts HTTP-only ───────────────
 echo ">>> Removing stale HTTPS config (if any)..."
 rm -f "${HTTPS_CONF}"
 
@@ -53,8 +65,7 @@ sleep 3
 
 # ── Step 3: Staging cert — verify ACME before hitting rate limits ─────────────
 echo ">>> Requesting Let's Encrypt staging certificate (connectivity check)..."
-docker compose -f "${COMPOSE_FILE}" run --rm --no-deps --entrypoint certbot certbot \
-  certonly \
+certbot_run certonly \
   --webroot \
   --webroot-path=/var/www/certbot \
   --email "${CERTBOT_EMAIL}" \
@@ -65,13 +76,11 @@ docker compose -f "${COMPOSE_FILE}" run --rm --no-deps --entrypoint certbot cert
   -d "www.${DOMAIN_REDIRECT}" \
   -d "${DOMAIN_API}"
 
-echo ">>> Staging OK. Deleting staging cert and requesting production cert..."
-docker compose -f "${COMPOSE_FILE}" run --rm --no-deps --entrypoint certbot certbot \
-  delete --cert-name "${DOMAIN_REDIRECT}" --non-interactive 2>/dev/null || true
+echo ">>> Staging OK. Requesting production certificate..."
+certbot_run delete --cert-name "${DOMAIN_REDIRECT}" --non-interactive 2>/dev/null || true
 
 # ── Step 4: Production certificate ───────────────────────────────────────────
-docker compose -f "${COMPOSE_FILE}" run --rm --no-deps --entrypoint certbot certbot \
-  certonly \
+certbot_run certonly \
   --webroot \
   --webroot-path=/var/www/certbot \
   --email "${CERTBOT_EMAIL}" \
@@ -84,20 +93,19 @@ docker compose -f "${COMPOSE_FILE}" run --rm --no-deps --entrypoint certbot cert
 
 echo ">>> Production certificate obtained!"
 
-# ── Step 5: Render HTTPS config template and write to conf.d ─────────────────
-# Use sed (always available) to substitute ${DOMAIN_REDIRECT} and ${DOMAIN_API}.
+# ── Step 5: Render HTTPS nginx config ────────────────────────────────────────
 echo ">>> Writing HTTPS nginx config..."
 sed \
   -e "s|\${DOMAIN_REDIRECT}|${DOMAIN_REDIRECT}|g" \
   -e "s|\${DOMAIN_API}|${DOMAIN_API}|g" \
   "${TEMPLATE}" > "${HTTPS_CONF}"
 
-# ── Step 6: Reload nginx to activate HTTPS ───────────────────────────────────
+# ── Step 6: Reload nginx ──────────────────────────────────────────────────────
 echo ">>> Reloading nginx with HTTPS config..."
 docker compose -f "${COMPOSE_FILE}" exec nginx nginx -s reload
 
 echo ""
 echo "Done! Start the full stack:"
-echo "  docker compose -f docker-compose.yml up -d"
+echo "  docker compose up -d"
 echo ""
 echo "Note: ${HTTPS_CONF} was generated — do not commit it."
