@@ -1,3 +1,20 @@
+# Production compose with nginx reverse proxy + Let's Encrypt TLS.
+#
+# Required .env variables:
+#   DOMAIN_REDIRECT=klo.gs          # main domain (short codes + frontend)
+#   DOMAIN_API=api.klo.gs           # API subdomain
+#   CERTBOT_EMAIL=you@example.com   # email for Let's Encrypt notifications
+#
+# First-time setup:
+#   chmod +x infra/nginx/init-letsencrypt.sh
+#   ./infra/nginx/init-letsencrypt.sh
+#
+# Then start the full stack:
+#   docker compose -f docker-compose-with-nginx.yml up -d
+#
+# With observability:
+#   docker compose -f docker-compose-with-nginx.yml --profile observability up -d
+
 services:
 
   # ─── Infrastructure ────────────────────────────────────────────────────────
@@ -9,7 +26,7 @@ services:
       POSTGRES_DB: shortener
       POSTGRES_USER: shortener
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shortener_dev}
-    ports:
+      ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -42,7 +59,7 @@ services:
       RABBITMQ_DEFAULT_VHOST: shortener
     ports:
       - "5672:5672"
-      - "15672:15672"    # management UI
+      - "15672:15672"    # management UI (internal access only)
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -66,7 +83,7 @@ services:
       postgres:
         condition: service_healthy
 
-  # ─── Application Services ──────────────────────────────────────────────────
+  # ─── Application Services (no host port exposure — nginx is the entry point) ─
 
   shortener-api:
     build:
@@ -91,6 +108,7 @@ services:
       Captcha__SecretKey: "${CAPTCHA__SECRET_KEY:-}"
       MultiTenancy__Mode: "${MULTITENANCY__MODE:-SingleTenant}"
       App__DefaultDomain: "${APP__DEFAULT_DOMAIN:-klo.gs}"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
     depends_on:
       shortener-migrator:
         condition: service_completed_successfully
@@ -114,6 +132,7 @@ services:
       RabbitMq__Username: "shortener"
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-shortener_dev}
       RabbitMq__VirtualHost: "shortener"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
     depends_on:
       shortener-migrator:
         condition: service_completed_successfully
@@ -152,18 +171,61 @@ services:
     ports:
       - "3000:3000"
     environment:
-      # Server-side proxy target — browser always calls same-origin frontend
       BACKEND_API_URL: "http://shortener-api:8080"
       NEXT_PUBLIC_CAPTCHA_SITE_KEY: "${CAPTCHA__SITE_KEY:-}"
-      # OIDC
       AUTH_ISSUER: "${AUTH__ISSUER:-https://idp.klogs.io}"
       AUTH_CLIENT_ID: "${AUTH__CLIENT_ID:-klogs.web}"
       AUTH_CLIENT_SECRET: "${AUTH__CLIENT_SECRET:-}"
       AUTH_SECRET: "${AUTH__SECRET:-change-me-in-production}"
-      # Required in Codespaces / behind a reverse proxy:
-      # AUTH_URL: "https://<your-codespaces-or-domain>:3000"
+      AUTH_URL: "https://${DOMAIN_REDIRECT:-localhost}"
     depends_on:
       - shortener-api
+
+  # ─── nginx + Let's Encrypt ─────────────────────────────────────────────────
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN_REDIRECT: "${DOMAIN_REDIRECT:-klo.gs}"
+      DOMAIN_API: "${DOMAIN_API:-api.klo.gs}"
+    volumes:
+      # Config template (envsubst replaces ${DOMAIN_REDIRECT} and ${DOMAIN_API})
+      - ./infra/nginx/templates:/etc/nginx/templates:ro
+      # TLS certificates managed by certbot
+      - letsencrypt_data:/etc/letsencrypt:ro
+      # ACME webroot challenge directory
+      - certbot_www:/var/www/certbot:ro
+    command: >
+      /bin/sh -c "
+        envsubst '$$DOMAIN_REDIRECT $$DOMAIN_API' \
+          < /etc/nginx/templates/default.conf.template \
+          > /etc/nginx/conf.d/default.conf
+        && nginx -g 'daemon off;'
+      "
+    depends_on:
+      - shortener-api
+      - shortener-redirect
+      - shortener-web
+
+  certbot:
+    image: certbot/certbot:latest
+    restart: unless-stopped
+    volumes:
+      - letsencrypt_data:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    # Renew every 12 hours; certbot only acts when cert expires within 30 days
+    entrypoint: >
+      /bin/sh -c "
+        trap exit TERM;
+        while :; do
+          certbot renew --quiet --webroot --webroot-path=/var/www/certbot;
+          sleep 12h & wait $${!};
+        done
+      "
 
   # ─── Observability (docker compose --profile observability up) ──────────────
 
@@ -203,12 +265,14 @@ services:
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
     ports:
-      - "3000:3000"
+      - "3001:3000"    # offset to avoid port clash with shortener-web in dev
     depends_on:
       - prometheus
 
 volumes:
   postgres_data:
   rabbitmq_data:
+  letsencrypt_data:
+  certbot_www:
   prometheus_data:
   grafana_data:
