@@ -427,3 +427,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Generated nginx HTTPS config (written by init-letsencrypt.sh)
+infra/nginx/conf.d/20-https.conf

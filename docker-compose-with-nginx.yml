@@ -187,16 +187,11 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    environment:
-      DOMAIN_REDIRECT: "${DOMAIN_REDIRECT:-klo.gs}"
-      DOMAIN_API: "${DOMAIN_API:-api.klo.gs}"
-      # Tell nginx's built-in envsubst to only substitute these two variables
-      # so that nginx's own $host, $remote_addr, etc. are left untouched.
-      NGINX_ENVSUBST_TEMPLATE_VARS: "DOMAIN_REDIRECT,DOMAIN_API"
     volumes:
-      # nginx:1.19+ auto-envsubst *.template files from /etc/nginx/templates/
-      # into /etc/nginx/conf.d/ on startup — no custom command needed.
-      - ./infra/nginx/templates:/etc/nginx/templates:ro
+      # conf.d is a bind-mount so init-letsencrypt.sh can write 20-https.conf
+      # after certs are obtained, then signal nginx to reload.
+      # 10-http.conf (HTTP-only) is always present; 20-https.conf is added by init script.
+      - ./infra/nginx/conf.d:/etc/nginx/conf.d
       # TLS certificates managed by certbot
       - letsencrypt_data:/etc/letsencrypt:ro
       # ACME webroot challenge directory

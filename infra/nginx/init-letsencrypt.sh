@@ -16,6 +16,10 @@ set -eu
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 ENV_FILE="${PROJECT_ROOT}/.env"
+CONF_D="${SCRIPT_DIR}/conf.d"
+TEMPLATE="${SCRIPT_DIR}/templates/20-https.conf.template"
+HTTPS_CONF="${CONF_D}/20-https.conf"
+COMPOSE_FILE="${PROJECT_ROOT}/docker-compose-with-nginx.yml"
 
 # Read a single KEY=value from the .env file without sourcing it.
 read_env() {
@@ -28,34 +32,26 @@ DOMAIN_REDIRECT="${DOMAIN_REDIRECT:-$(read_env DOMAIN_REDIRECT)}"
 DOMAIN_API="${DOMAIN_API:-$(read_env DOMAIN_API)}"
 CERTBOT_EMAIL="${CERTBOT_EMAIL:-$(read_env CERTBOT_EMAIL)}"
 
-: "${DOMAIN_REDIRECT:?DOMAIN_REDIRECT not set. Add it to .env or export it before running this script.}"
-: "${DOMAIN_API:?DOMAIN_API not set. Add it to .env or export it before running this script.}"
-: "${CERTBOT_EMAIL:?CERTBOT_EMAIL not set. Add it to .env or export it before running this script.}"
-
-COMPOSE_FILE="${PROJECT_ROOT}/docker-compose-with-nginx.yml"
+: "${DOMAIN_REDIRECT:?DOMAIN_REDIRECT not set. Add it to .env or export it before running.}"
+: "${DOMAIN_API:?DOMAIN_API not set. Add it to .env or export it before running.}"
+: "${CERTBOT_EMAIL:?CERTBOT_EMAIL not set. Add it to .env or export it before running.}"
 
 echo "Domains  : ${DOMAIN_REDIRECT}  /  ${DOMAIN_API}"
 echo "Email    : ${CERTBOT_EMAIL}"
 echo ""
 
-# ── Step 1: Create dummy self-signed cert so nginx can start ──────────────────
-# nginx refuses to start if the ssl_certificate file doesn't exist.
-echo ">>> Creating temporary self-signed certificate..."
-docker compose -f "${COMPOSE_FILE}" run --rm --no-deps certbot \
-  sh -c "
-    mkdir -p /etc/letsencrypt/live/${DOMAIN_REDIRECT} &&
-    openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
-      -keyout /etc/letsencrypt/live/${DOMAIN_REDIRECT}/privkey.pem \
-      -out    /etc/letsencrypt/live/${DOMAIN_REDIRECT}/fullchain.pem \
-      -subj   '/CN=localhost'
-  "
+# ── Step 1: Remove any existing HTTPS config so nginx starts HTTP-only ─────────
+# 10-http.conf is always present (committed to git) and serves port 80 only.
+# nginx can start without SSL cert because 20-https.conf doesn't exist yet.
+echo ">>> Removing stale HTTPS config (if any)..."
+rm -f "${HTTPS_CONF}"
 
-# ── Step 2: Start nginx (it can now load the dummy cert) ─────────────────────
-echo ">>> Starting nginx..."
+# ── Step 2: Start nginx (HTTP-only — no SSL cert required) ────────────────────
+echo ">>> Starting nginx (HTTP-only)..."
 docker compose -f "${COMPOSE_FILE}" up -d nginx
 sleep 3
 
-# ── Step 3: Request staging cert (verify ACME before hitting rate limits) ─────
+# ── Step 3: Staging cert — verify ACME before hitting rate limits ─────────────
 echo ">>> Requesting Let's Encrypt staging certificate (connectivity check)..."
 docker compose -f "${COMPOSE_FILE}" run --rm --no-deps certbot certonly \
   --webroot \
@@ -68,11 +64,11 @@ docker compose -f "${COMPOSE_FILE}" run --rm --no-deps certbot certonly \
   -d "www.${DOMAIN_REDIRECT}" \
   -d "${DOMAIN_API}"
 
-echo ">>> Staging OK. Requesting production certificate..."
+echo ">>> Staging OK. Deleting staging cert and requesting production cert..."
 docker compose -f "${COMPOSE_FILE}" run --rm --no-deps certbot delete \
   --cert-name "${DOMAIN_REDIRECT}" --non-interactive 2>/dev/null || true
 
-# ── Step 4: Request production certificate ────────────────────────────────────
+# ── Step 4: Production certificate ───────────────────────────────────────────
 docker compose -f "${COMPOSE_FILE}" run --rm --no-deps certbot certonly \
   --webroot \
   --webroot-path=/var/www/certbot \
@@ -86,10 +82,20 @@ docker compose -f "${COMPOSE_FILE}" run --rm --no-deps certbot certonly \
 
 echo ">>> Production certificate obtained!"
 
-# ── Step 5: Reload nginx with the real certificate ───────────────────────────
-echo ">>> Reloading nginx with real certificate..."
+# ── Step 5: Render HTTPS config template and write to conf.d ─────────────────
+# Use sed (always available) to substitute ${DOMAIN_REDIRECT} and ${DOMAIN_API}.
+echo ">>> Writing HTTPS nginx config..."
+sed \
+  -e "s|\${DOMAIN_REDIRECT}|${DOMAIN_REDIRECT}|g" \
+  -e "s|\${DOMAIN_API}|${DOMAIN_API}|g" \
+  "${TEMPLATE}" > "${HTTPS_CONF}"
+
+# ── Step 6: Reload nginx to activate HTTPS ───────────────────────────────────
+echo ">>> Reloading nginx with HTTPS config..."
 docker compose -f "${COMPOSE_FILE}" exec nginx nginx -s reload
 
 echo ""
 echo "Done! Start the full stack:"
 echo "  docker compose -f docker-compose-with-nginx.yml up -d"
+echo ""
+echo "Note: ${HTTPS_CONF} was generated — do not commit it."
